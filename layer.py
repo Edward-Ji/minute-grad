@@ -96,16 +96,7 @@ class Sigmoid(Layer):
 class Softmax(Layer):
 
     def forward(self, x) -> Tensor:
-        exps = np.exp(x.val - x.val.max(axis=-1, keepdims=True))
-        out = Tensor(exps / exps.sum(axis=-1, keepdims=True), x.requires_grad)
-
-        def _backward():
-            x.grad += unbroadcast(out.grad * out.val * (1 - out.val), x.shape)
-
-        out._backward = _backward
-        out._prev = {x}
-
-        return out
+        raise NotImplementedError
 
 
 class BatchNormalisation(Layer):
