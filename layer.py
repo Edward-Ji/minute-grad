@@ -1,10 +1,14 @@
 from abc import abstractmethod
 from typing import Any
+
 import numpy as np
+
 from tensor import Tensor
+from util import he_initialise, unbroadcast
 
 
-class Layer:   
+class Layer:
+
     def get_all_tensors(self):
         for attr in self.__dict__.values():
             if isinstance(attr, Tensor):
@@ -20,76 +24,129 @@ class Layer:
         return self.forward(*args, **kwargs)
 
 
+class Identity(Layer):
+
+    def forward(self, x) -> Tensor:
+        return x
+
+
 class Linear(Layer):
-    
+
     def __init__(self, no_input, no_output):
         self.no_input = no_input
         self.no_output = no_output
 
-        self.weight = Tensor(np.random.randn(no_input, no_output), True)
-        self.bias = Tensor(np.random.randn(1, no_output), True)
+        self.weight = Tensor(he_initialise(no_input, no_output), True)
+        self.bias = Tensor(np.zeros((1, no_output)), True)
 
     def forward(self, x) -> Tensor:
         out = x @ self.weight + self.bias
         return out
 
 
+class ReLU(Layer):
+
+    def forward(self, x) -> Tensor:
+        out = Tensor(np.maximum(x.val, 0), x.requires_grad)
+
+        def _backward():
+            x.grad += unbroadcast(out.grad * np.sign(out.val), x.shape)
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
+
+
+class Dropout(Layer):
+
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def forward(self, x) -> Tensor:
+        if self.p == 0:
+            return x
+
+        mask = np.random.binomial(1, 1 - self.p, x.shape)
+        out = Tensor(x.val * mask, x.requires_grad)
+
+        def _backward():
+            x.grad += unbroadcast(out.grad * mask, x.shape)
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
+
+
+class Sigmoid(Layer):
+
+    def forward(self, x) -> Tensor:
+        out = Tensor(1 / (1 + np.exp(-x.val)), x.requires_grad)
+
+        def _backward():
+            x.grad += unbroadcast(out.grad * out.val * (1 - out.val), x.shape)
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
+
 
 class Softmax(Layer):
-    
-    def __init__(self, input_dim, output_dim):
-        self.input = np.zeros(input_dim)
-        self.output = np.zeros(output_dim)
-        self.grad = 0
 
-    def calculate_probabilities(self):
-        self.output = np.exp(self.input) / np.sum(np.exp(self.input))
-        return self.output
+    def forward(self, x) -> Tensor:
+        exps = np.exp(x.val - x.val.max(axis=-1, keepdims=True))
+        out = Tensor(exps / exps.sum(axis=-1, keepdims=True), x.requires_grad)
 
-    def backward(self):
-        #used for backprop. todo, idk what to do here
-        pass
+        def _backward():
+            x.grad += unbroadcast(out.grad * out.val * (1 - out.val), x.shape)
 
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
 
 
 class BatchNormalisation(Layer):
-    
-    def __init__(self, input_dim, epsilon=1e-5):
-        self.input = np.zeros(input_dim)
-        self.output = np.zeros(input_dim)
+
+    def __init__(self, epsilon=1e-5):
         self.epsilon = epsilon
 
-    def calculate_output(self):
-        self.output = (self.input - np.mean(self.input)) / np.sqrt(np.var(self.input) + self.epsilon)
-        return self.output
+    def forward(self, x) -> Tensor:
+        raise NotImplementedError
+
+
+class MeanSquaredError(Layer):
+
+    def forward(self, pred, truth) -> Tensor:
+        loss = ((pred.val - truth.val) ** 2).sum() / len(truth)
+        out = Tensor(loss, pred.requires_grad)
+
+        def _backward():
+            pred.grad += 2 * (pred.val - truth.val) / len(truth)
+
+        out._backward = _backward
+        out._prev = {pred}
+        return out
 
 
 class CrossEntropyLoss(Layer):
 
-    def __init__(self):
-        self.num_examples = 0
-        self.loss = 0
-        self.grad = None
+    def forward(self, logits, labels) -> Tensor:
+        raise NotImplementedError
 
-    def update_loss(self, prob_predictions, prob_true):
-        # note: this function requires the true prediction to be in one-hot form (i.e. 0 for all the wrong labels and 1 for the right label)
-        # use this function to calculate the loss for each training example's output before undertaking backpropagation
-        self.loss = ((self.loss * self.num_examples) + (-np.sum(prob_true * np.log(prob_predictions)))) / (self.num_examples + 1)
-        self.num_examples += 1
-        # add this training example's error
-        self.grad = np.append(self.error_matrix, prob_predictions - prob_true, axis=0) if self.error_matrix else np.array(prob_predictions - prob_true, ndmin=2)
-        return self.loss
 
-    def get_gradient():
-        # use this after finishing a batch, and use the result in the backprop process
-        return self.grad
+class Composite(Layer):
 
-    def clear_loss(self):
-        # use this function after each batch of training
-        self.loss = 0
-        self.num_examples = 0
-        self.grad = None
+    def __init__(self, layers: list[Layer]):
+        self.layers = layers
 
-    def get_loss(self):
-        # return the calculated loss value
-        return self.loss
+    def get_all_tensors(self):
+        for attr in self.layers:
+            yield from attr.get_all_tensors()
+
+    def forward(self, x) -> Tensor:
+        for layer in self.layers:
+            x = layer(x)
+        return x

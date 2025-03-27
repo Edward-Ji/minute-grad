@@ -1,80 +1,53 @@
 import numpy as np
+from sklearn.datasets import make_blobs
 
-from layer import Linear
-from optimiser import AdamOptimiser, GradientDescentOptimiser
+from layer import Composite, Dropout, Linear, MeanSquaredError, ReLU, Sigmoid
+from optimiser import AdamOptimiser
 from tensor import Tensor
+from util import train_test_split
 
-def linear_demo():
-    linear = Linear(2, 1)
-    X = Tensor(np.array([[1, 1], [1, 2], [2, 2]], dtype=float))
-    w = Tensor(np.array([[2], [1]], dtype=float))
-    b = Tensor(np.array(3))
-    y = X @ w + b
-    print(y)
-    pred = linear(X)
-    print(f"{pred = !s}")
-    error = pred - y
-    print(f"{error = !s}")
-    abs_error = error.abs()
-    print(f"{abs_error = !s}")
-    loss = abs_error.sum()
-    print(f"{loss = !s}")
-    loss.backward()
-    for tensor in [*linear.get_all_tensors(), error, abs_error, loss]:
-        print(tensor)
-        print(tensor.grad)
-        print('---')
-
-def gradient_descent_demo():
-    # synthetic data
-    X = Tensor(np.array([[1, 1], [1, 2], [2, 2]], dtype=float))
-    w = Tensor(np.array([[2], [1]], dtype=float))
-    b = Tensor(np.array(3))
-    y = X @ w + b
-    print(w)
-    print(b)
-
-    # linear model
-    linear = Linear(2, 1)
-    optimiser = GradientDescentOptimiser(linear.get_all_tensors(),
-                                         learning_rate=1e-3)
-    print(linear.weight)
-    print(linear.bias)
-    for _ in range(10_000):
-        optimiser.zero_grad()
-        pred = linear(X)
-        loss = (pred - y).abs().sum()
-        loss.backward()
-        optimiser.optimise()
-    print(linear.weight)
-    print(linear.bias)
-
-
-def adam_demo():
-    # synthetic data
-    X = Tensor(np.array([[1, 1], [1, 2], [2, 2]], dtype=float))
-    w = Tensor(np.array([[2], [1]], dtype=float))
-    b = Tensor(np.array(3))
-    y = X @ w + b
-    print(w)
-    print(b)
-
-    # linear model
-    linear = Linear(2, 1)
-    optimiser = AdamOptimiser(linear.get_all_tensors(), learning_rate=1e-3)
-    print(linear.weight)
-    print(linear.bias)
-    for _ in range(10_000):
-        optimiser.zero_grad()
-        pred = linear(X)
-        loss = (pred - y).abs().sum()
-        loss.backward()
-        optimiser.optimise()
-    print(linear.weight)
-    print(linear.bias)
 
 def main():
-    gradient_descent_demo()
+    """
+    Binary classification using a simple neural network with dropout.
+    """
+    X, y = make_blobs(centers=2)
+    y = y[:, None]
+    X_train, y_train, X_test, y_test = train_test_split(X, y, test_size=0.2)
+    X_train = Tensor(X_train)
+    y_train = Tensor(y_train)
+    X_test = Tensor(X_test)
+    y_test = Tensor(y_test)
+
+    # linear model
+    model = Composite(
+        [
+            Linear(2, 32),
+            ReLU(),
+            Dropout(0.1),
+            Linear(32, 32),
+            ReLU(),
+            Dropout(0.1),
+            Linear(32, 1),
+            Sigmoid(),
+        ]
+    )
+    optimiser = AdamOptimiser(model.get_all_tensors())
+    loss_fn = MeanSquaredError()
+
+    pred = model(X_test)
+    accuracy = np.mean((pred.val > 0.5) == y_test.val)
+    print(f"Accuracy: {accuracy:.2f}")
+    for _ in range(10_000):
+        optimiser.zero_grad()
+        pred = model(X_train)
+        loss = loss_fn(pred, y_train)
+        loss.backward()
+        optimiser.optimise()
+    pred = model(X_test)
+    accuracy = np.mean((pred.val > 0.5) == y_test.val)
+    print(f"Accuracy: {accuracy:.2f}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,39 @@
+from pathlib import Path
+
+import numpy as np
+from numpy.typing import NDArray
+
+
+def unbroadcast(grad: NDArray, shape):
+    # If grad has more dimensions than shape, sum over the extra dimensions.
+    while grad.ndim > len(shape):
+        grad = grad.sum(axis=0)
+    # For dimensions where shape is 1, sum over that axis.
+    for i, dim in enumerate(shape):
+        if dim == 1:
+            grad = grad.sum(axis=i, keepdims=True)
+    return grad
+
+
+def xavier_initialise(n_in, n_out):
+    return np.random.randn(n_in, n_out) * np.sqrt(2 / (n_in + n_out))
+
+
+def he_initialise(n_in, n_out):
+    return np.random.randn(n_in, n_out) * np.sqrt(2 / n_in)
+
+
+def train_test_split(X: NDArray, y: NDArray, test_size: float):
+    n_test = int(len(y) * test_size)
+    indices = np.random.permutation(len(y))
+    test_indices = indices[:n_test]
+    train_indices = indices[n_test:]
+    return X[train_indices], y[train_indices], X[test_indices], y[test_indices]
+
+
+def load_data(data_path: Path):
+    X_train = np.load(data_path / "train_data.npy")
+    y_train = np.load(data_path / "train_label.npy")
+    X_test = np.load(data_path / "test_data.npy")
+    y_test = np.load(data_path / "test_label.npy")
+    return X_train, y_train, X_test, y_test

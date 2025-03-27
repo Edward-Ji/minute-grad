@@ -32,10 +32,12 @@ class AdamOptimiser(Optimiser):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        self.first_moment = {tensor: np.zeros_like(tensor.grad)
-                             for tensor in self.tensors}
-        self.second_moment = {tensor: np.zeros_like(tensor.grad)
-                              for tensor in self.tensors}
+        self.first_moment = {
+            tensor: np.zeros_like(tensor.grad) for tensor in self.tensors
+        }
+        self.second_moment = {
+            tensor: np.zeros_like(tensor.grad) for tensor in self.tensors
+        }
 
     def optimise(self):
         for tensor in self.tensors:
