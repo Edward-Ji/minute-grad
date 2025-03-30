@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 
 from tensor import Tensor
-from util import he_initialise, unbroadcast
+from util import kaiming_uniform, unbroadcast
 
 
 class Layer:
@@ -32,11 +32,11 @@ class Identity(Layer):
 
 class Linear(Layer):
 
-    def __init__(self, no_input, no_output):
+    def __init__(self, no_input, no_output, initialise=kaiming_uniform):
         self.no_input = no_input
         self.no_output = no_output
 
-        self.weight = Tensor(he_initialise(no_input, no_output), True)
+        self.weight = Tensor(initialise(no_input, no_output), True)
         self.bias = Tensor(np.zeros((1, no_output)), True)
 
     def forward(self, x) -> Tensor:
