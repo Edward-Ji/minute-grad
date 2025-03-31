@@ -6,6 +6,8 @@ from optimiser import AdamOptimiser
 from tensor import Tensor
 from util import train_test_split
 
+from util import xavier_uniform
+
 
 def main():
     """
@@ -28,7 +30,7 @@ def main():
             Linear(32, 32),
             ReLU(),
             Dropout(0.1),
-            Linear(32, 1),
+            Linear(32, 1, initialise=xavier_uniform),
             Sigmoid(),
         ]
     )
