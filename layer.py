@@ -94,9 +94,19 @@ class Sigmoid(Layer):
 
 
 class Softmax(Layer):
-
     def forward(self, x) -> Tensor:
-        raise NotImplementedError
+        # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
+        # May not be an issue for now, but might consider doing some normalisation to ensure consistency
+        # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
+        out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val)), x.requires_grad)
+
+        def _backward():
+            x.grad += unbroadcast((np.diag(out.val) - np.outer(out.val, out.val)), x.shape)
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
 
 
 class BatchNormalisation(Layer):
@@ -124,9 +134,25 @@ class MeanSquaredError(Layer):
 
 class CrossEntropyLoss(Layer):
 
-    def forward(self, logits, labels) -> Tensor:
-        raise NotImplementedError
+    def __init__(self, epsilon=1e-8):
+        self.epsilon = epsilon
 
+    def forward(self, logits, labels) -> Tensor:
+        # for each training example, identify the correct class (generate an array of indices, where each index refers to the correct label)
+        correct_classes = np.argmax(labels, axis=1)
+        # using the indices of the correct labels, find the predicted probability of the correct label in each training example
+        correct_values = np.array([logits[i][correct_classes[i]] for i in range(len(logits))])
+        # take the negative log and average it out to obtain the loss value
+        loss = (-np.log(correct_values)).sum() / len(labels)
+        out = Tensor(loss, logits.requires_grad)
+
+        def _backward():
+            # note: we add epsilon here to avoid a divide by 0 error
+            logits.grad += unbroadcast(-1 / (correct_values + self.epsilon), logits.shape)
+
+        out._backward = _backward
+        out._prev = {logits}
+        return out
 
 class Composite(Layer):
 
