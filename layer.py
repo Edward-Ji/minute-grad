@@ -134,25 +134,28 @@ class MeanSquaredError(Layer):
 
 class CrossEntropyLoss(Layer):
 
-    def __init__(self, epsilon=1e-8):
+    def __init__(self, epsilon=1e-15):
         self.epsilon = epsilon
 
-    def forward(self, logits, labels) -> Tensor:
-        # for each training example, identify the correct class (generate an array of indices, where each index refers to the correct label)
-        correct_classes = np.argmax(labels, axis=1)
-        # using the indices of the correct labels, find the predicted probability of the correct label in each training example
-        correct_values = np.array([logits[i][correct_classes[i]] for i in range(len(logits))])
-        # take the negative log and average it out to obtain the loss value
-        loss = (-np.log(correct_values)).sum() / len(labels)
-        out = Tensor(loss, logits.requires_grad)
+    def forward(self, logits: Tensor, labels: Tensor) -> Tensor:
+        n_sample = logits.val.shape[0]
+
+        exp_logits = np.exp(logits.val)
+        sum_exp = np.sum(exp_logits, axis=1, keepdims=True)
+        probs = exp_logits / sum_exp
+        error = -np.log(probs[np.arange(n_sample), labels.val] + self.epsilon)
+        out = Tensor(np.mean(error), logits.requires_grad)
 
         def _backward():
-            # note: we add epsilon here to avoid a divide by 0 error
-            logits.grad += unbroadcast(-1 / (correct_values + self.epsilon), logits.shape)
+            if logits.requires_grad:
+                true_probs = np.zeros_like(probs)
+                true_probs[np.arange(n_sample), labels.val] = 1
+                logits.grad += probs - true_probs
 
         out._backward = _backward
         out._prev = {logits}
         return out
+
 
 class Composite(Layer):
 
