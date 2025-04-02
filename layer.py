@@ -125,12 +125,24 @@ class Softmax(Layer):
 
 class BatchNormalisation(Layer):
 
-    def __init__(self, epsilon=1e-5):
+    def __init__(self, no_output, epsilon=1e-5):
         super().__init__()
         self.epsilon = epsilon
+        self.no_output = no_output
+        self.weight = Tensor(initialise(no_output, no_output), True)
+        self.bias = Tensor(np.zeros((1, no_output)), True)
 
     def forward(self, x) -> Tensor:
-        raise NotImplementedError
+        normalised_data = (x.val - np.mean(x.val)) / np.sqrt(np.var(x.val) + self.epsilon)
+        out = (normalised_data @ self.weight) + self.bias
+
+        def _backward():
+            #TODO
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
 
 
 class MeanSquaredError(Layer):
