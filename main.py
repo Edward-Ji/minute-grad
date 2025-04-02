@@ -1,20 +1,19 @@
 import numpy as np
 from sklearn.datasets import make_blobs
 
-from layer import Composite, Dropout, Linear, MeanSquaredError, ReLU, Sigmoid
+from layer import Composite, CrossEntropyLoss, Dropout, Linear, ReLU
 from optimiser import AdamOptimiser
 from tensor import Tensor
-from util import train_test_split
-
-from util import xavier_uniform
+from util import train_test_split, xavier_uniform
 
 
 def main():
     """
-    Binary classification using a simple neural network with dropout.
+    Multi-class classification using a simple neural network with dropout.
     """
-    X, y = make_blobs(centers=2)
-    y = y[:, None]
+    X: np.ndarray
+    y: np.ndarray
+    X, y = make_blobs(centers=3)  # pyright: ignore[reportAssignmentType]
     X_train, y_train, X_test, y_test = train_test_split(X, y, test_size=0.2)
     X_train = Tensor(X_train)
     y_train = Tensor(y_train)
@@ -30,25 +29,24 @@ def main():
             Linear(32, 32),
             ReLU(),
             Dropout(0.1),
-            Linear(32, 1, initialise=xavier_uniform),
-            Sigmoid(),
+            Linear(32, 3, initialise=xavier_uniform)
         ]
     )
     optimiser = AdamOptimiser(model.get_all_tensors())
-    loss_fn = MeanSquaredError()
+    loss_fn = CrossEntropyLoss()
 
-    pred = model(X_test)
-    accuracy = np.mean((pred.val > 0.5) == y_test.val)
-    print(f"Accuracy: {accuracy:.2f}")
-    for _ in range(10_000):
+    logits = model(X_test)
+    accuracy = np.mean(np.argmax(logits.val, axis=1) == y_test.val)
+    print(f"Before training test accuracy: {accuracy:.2f}")
+    for _ in range(100):
         optimiser.zero_grad()
-        pred = model(X_train)
-        loss = loss_fn(pred, y_train)
+        logits = model(X_train)
+        loss = loss_fn(logits, y_train)
         loss.backward()
         optimiser.optimise()
-    pred = model(X_test)
-    accuracy = np.mean((pred.val > 0.5) == y_test.val)
-    print(f"Accuracy: {accuracy:.2f}")
+    logits = model(X_test)
+    accuracy = np.mean(np.argmax(logits.val, axis=1) == y_test.val)
+    print(f"After training test accuracy: {accuracy:.2f}")
 
 
 if __name__ == "__main__":
