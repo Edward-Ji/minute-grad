@@ -9,6 +9,16 @@ from util import kaiming_uniform, unbroadcast
 
 class Layer:
 
+    def __init__(self):
+        self.training = True
+
+    def train(self, training: bool):
+        if self.training != training:
+            self.training = training
+            for attr in self.__dict__.values():
+                if isinstance(attr, Layer):
+                    attr.train(training)
+
     def get_all_tensors(self):
         for attr in self.__dict__.values():
             if isinstance(attr, Tensor):
@@ -33,6 +43,8 @@ class Identity(Layer):
 class Linear(Layer):
 
     def __init__(self, no_input, no_output, initialise=kaiming_uniform):
+        super().__init__()
+
         self.no_input = no_input
         self.no_output = no_output
 
@@ -61,10 +73,11 @@ class ReLU(Layer):
 class Dropout(Layer):
 
     def __init__(self, p=0.5):
+        super().__init__()
         self.p = p
 
     def forward(self, x) -> Tensor:
-        if self.p == 0:
+        if not self.training or self.p == 0:
             return x
 
         mask = np.random.binomial(1, 1 - self.p, x.shape)
@@ -94,6 +107,7 @@ class Sigmoid(Layer):
 
 
 class Softmax(Layer):
+
     def forward(self, x) -> Tensor:
         # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
         # May not be an issue for now, but might consider doing some normalisation to ensure consistency
@@ -112,6 +126,7 @@ class Softmax(Layer):
 class BatchNormalisation(Layer):
 
     def __init__(self, epsilon=1e-5):
+        super().__init__()
         self.epsilon = epsilon
 
     def forward(self, x) -> Tensor:
@@ -135,6 +150,7 @@ class MeanSquaredError(Layer):
 class CrossEntropyLoss(Layer):
 
     def __init__(self, epsilon=1e-15):
+        super().__init__()
         self.epsilon = epsilon
 
     def forward(self, logits: Tensor, labels: Tensor) -> Tensor:
@@ -160,7 +176,13 @@ class CrossEntropyLoss(Layer):
 class Composite(Layer):
 
     def __init__(self, layers: list[Layer]):
+        super().__init__()
         self.layers = layers
+
+    def mode(self, training: bool):
+        self.training = training
+        for attr in self.layers:
+            attr.train(training)
 
     def get_all_tensors(self):
         for attr in self.layers:

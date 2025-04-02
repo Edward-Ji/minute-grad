@@ -37,16 +37,21 @@ def main():
     optimiser = AdamOptimiser(model.get_all_tensors())
     loss_fn = CrossEntropyLoss()
 
+    model.train(False)
     logits = model(X_test)
     accuracy = np.mean(np.argmax(logits.val, axis=1) == y_test.val)
     print(f"Before training test accuracy: {accuracy:.2f}")
     for _ in range(100):
+
+    model.train(True)
         for X_batch, y_batch in batches_trian:
             optimiser.zero_grad()
             logits = model(X_batch)
             loss = loss_fn(logits, y_batch)
             loss.backward()
             optimiser.optimise()
+
+    model.train(False)
     logits = model(X_test)
     accuracy = np.mean(np.argmax(logits.val, axis=1) == y_test.val)
     print(f"After training test accuracy: {accuracy:.2f}")
