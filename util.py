@@ -14,6 +14,9 @@ class BatchGenerator:
         self.batch_size = batch_size
         self.shuffle = shuffle
 
+    def __len__(self):
+        return int(np.ceil(len(self.data[0]) / self.batch_size))
+
     def __iter__(self):
         indices = np.arange(len(self.data[0]))
         if self.shuffle:
