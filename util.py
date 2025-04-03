@@ -4,6 +4,29 @@ import numpy as np
 from numpy.typing import NDArray
 
 
+class BatchGenerator:
+
+    def __init__(self, *data, batch_size, shuffle=False):
+        assert all(
+            len(data[0]) == len(array) for array in data
+        ), "All data arrays must have the same length"
+        self.data = data
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+
+    def __len__(self):
+        return int(np.ceil(len(self.data[0]) / self.batch_size))
+
+    def __iter__(self):
+        indices = np.arange(len(self.data[0]))
+        if self.shuffle:
+            np.random.shuffle(indices)
+        for start in range(0, len(self.data[0]), self.batch_size):
+            end = min(start + self.batch_size, len(self.data[0]))
+            batch_indices = indices[start:end]
+            yield tuple(array[batch_indices] for array in self.data)
+
+
 def unbroadcast(grad: NDArray, shape):
     # If grad has more dimensions than shape, sum over the extra dimensions.
     while grad.ndim > len(shape):
