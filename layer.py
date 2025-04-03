@@ -125,19 +125,46 @@ class Softmax(Layer):
 
 class BatchNormalisation(Layer):
 
-    def __init__(self, no_output, epsilon=1e-5):
+    def __init__(self, features, epsilon=1e-5, initialise=kaiming_uniform):
         super().__init__()
         self.epsilon = epsilon
-        self.no_output = no_output
-        self.weight = Tensor(initialise(no_output, no_output), True)
-        self.bias = Tensor(np.zeros((1, no_output)), True)
+        self.weights = Tensor(np.ones((1, features)), True)
+        self.bias = Tensor(np.zeros((1, features)), True)
 
     def forward(self, x) -> Tensor:
-        normalised_data = (x.val - np.mean(x.val)) / np.sqrt(np.var(x.val) + self.epsilon)
-        out = (normalised_data @ self.weight) + self.bias
+        mu = np.mean(x.val, axis=0)
+        sigma_squared = np.var(x.val, axis=0)
+        batch_size = len(x.val)
+        normalised_data = Tensor((x.val - mu) / np.sqrt(sigma_squared + self.epsilon, axis=0), x.requires_grad)
+        # We do an elementwise multiplication here with the weights because normalised data is a tensor containing multiple input samples
+        # Therefore, we want to multiply the weight array with each respective column in the tensor
+        # e.g. if our input data is
+        # input = [[1, 2, 3]
+        #          [4, 5, 6]
+        #          [7, 8, 9]]
+        # (i.e. 3 samples in the batch with 3 features each)
+        
+        # and our weight/bias is
+        # weights = [10, 20, 30]
+        # 
+        # then this represents that the weight for the first feature is 10, the weight for the second feature is 20, etc.
+        # therefore, we want the result to be 
+        # input * weights = [[10, 40, 90]
+        #                    [40, 100, 180]
+        #                    [70, 160, 270]]
+        out = normalised_data * self.weight + self.bias 
 
         def _backward():
-            #TODO
+            beta_gradient = np.sum(out.grad, axis=0)
+            gamma_gradient = np.sum(out.grad * normalised_data.val, axis=0)
+            self.bias.grad += beta_gradient
+            self.weights.grad += gamma_gradient
+
+            normalised_gradient = out.grad * self.weights.val
+            var_inv = 1.0 / np.sqrt(sigma_squared + self.epsilon)
+            var_gradient = np.sum(normalised_gradient * (x.val - mu) * -0.5 * (var_inv ** 3), axis=0)
+            mu_gradient = np.sum(normalised_gradient * -var_inv, axis=0) + var_gradient * np.sum(-2 * (x.val - mu), axis=0) / batch_size
+            x.grad += (normalised_gradient * var_inv) + (var_gradient * 2 * (x.val - mu) / batch_size) + (mu_gradient / batch_size)
 
         out._backward = _backward
         out._prev = {x}
