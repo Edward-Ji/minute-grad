@@ -42,8 +42,7 @@ def main():
     accuracy = np.mean(np.argmax(logits.val, axis=1) == y_test.val)
     print(f"Before training test accuracy: {accuracy:.2f}")
     for _ in range(100):
-
-    model.train(True)
+        model.train(True)
         for X_batch, y_batch in batches_trian:
             optimiser.zero_grad()
             logits = model(X_batch)
