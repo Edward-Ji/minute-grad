@@ -4,7 +4,6 @@ from util import unbroadcast
 
 
 class Tensor:
-
     def __init__(self, val, requires_grad=False):
         self.val = np.array(val)
 
@@ -25,8 +24,7 @@ class Tensor:
         return f"Tensor({self.val})"
 
     def __matmul__(self, other):
-        out = Tensor(self.val @ other.val,
-                     self.requires_grad or other.requires_grad)
+        out = Tensor(self.val @ other.val, self.requires_grad or other.requires_grad)
 
         def _backward():
             if self.requires_grad:
@@ -40,8 +38,7 @@ class Tensor:
         return out
 
     def __add__(self, other):
-        out = Tensor(self.val + other.val,
-                     self.requires_grad or other.requires_grad)
+        out = Tensor(self.val + other.val, self.requires_grad or other.requires_grad)
 
         def _backward():
             if self.requires_grad:
@@ -70,8 +67,7 @@ class Tensor:
         return self + -other
 
     def __mul__(self, other):
-        out = Tensor(self.val * other.val,
-                     self.requires_grad or other.requires_grad)
+        out = Tensor(self.val * other.val, self.requires_grad or other.requires_grad)
 
         def _backward():
             if self.requires_grad:
@@ -101,8 +97,7 @@ class Tensor:
 
         def _backward():
             if self.requires_grad:
-                self.grad += unbroadcast(np.sign(self.val) * out.grad,
-                                         self.shape)
+                self.grad += unbroadcast(np.sign(self.val) * out.grad, self.shape)
 
         out._backward = _backward
         out._prev = {self}
@@ -115,7 +110,8 @@ class Tensor:
         def _backward():
             if self.requires_grad:
                 self.grad += unbroadcast(
-                    power * self.val**(power - 1) * out.grad, self.shape)
+                    power * self.val ** (power - 1) * out.grad, self.shape
+                )
 
         out._backward = _backward
         out._prev = {self}
