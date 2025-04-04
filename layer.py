@@ -108,14 +108,26 @@ class Sigmoid(Layer):
 
 class Softmax(Layer):
 
+    def __init__(self, features, num_outputs, initialise=kaiming_uniform):
+        self.weights = Tensor(initialise(features, num_outputs), True)
+        self.bias = Tensor(np.zeros((1, num_outputs)), True)
+
     def forward(self, x) -> Tensor:
         # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
         # May not be an issue for now, but might consider doing some normalisation to ensure consistency
         # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
-        out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val)), x.requires_grad)
+        # TODO: might be the wrong way around
+        weighted = x @ self.weights + self.bias
 
+        out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1), x.requires_grad)
         def _backward():
-            x.grad += unbroadcast((np.diag(out.val) - np.outer(out.val, out.val)), x.shape)
+            diag = np.array([np.diag(out.val[i]) for i in range(len(out.val))])
+            outer = np.array([np.outer(out.val[i], out.val[i]) for i in range(len(out.val))])
+            jacobian_gradient = np.array([diag[i] - outer[i] for i in range(len(diag))])
+            for i in range(len(x.val)):
+                self.weights.grad += jacobian_gradient[i] * x.val[i]
+                self.bias.grad += np.sum(jacobian_gradient[i], axis=1)
+            x.grad += unbroadcast(x.grad @ self.weights.val, x.shape)
 
         out._backward = _backward
         out._prev = {x}

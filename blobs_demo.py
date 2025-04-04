@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.datasets import make_blobs
 
-from layer import Composite, CrossEntropyLoss, Dropout, Linear, ReLU
+from layer import Composite, CrossEntropyLoss, Dropout, Linear, ReLU, Softmax
 from optimiser import AdamOptimiser
 from tensor import Tensor
 from util import BatchGenerator, train_test_split, xavier_uniform
@@ -20,18 +20,15 @@ def main():
     X_test = Tensor(X_test)
     y_test = Tensor(y_test)
 
-    batches_trian = BatchGenerator(X_train, y_train, batch_size=32)
+    batches_train = BatchGenerator(X_train, y_train, batch_size=32)
 
     # linear model
     model = Composite(
         [
             Linear(2, 32),
             ReLU(),
-            Dropout(0.1),
-            Linear(32, 32),
-            ReLU(),
-            Dropout(0.1),
-            Linear(32, 3, initialise=xavier_uniform)
+            Linear(32, 3, initialise=xavier_uniform),
+            Softmax(3, 3)
         ]
     )
     optimiser = AdamOptimiser(model.get_all_tensors())
@@ -42,9 +39,8 @@ def main():
     accuracy = np.mean(np.argmax(logits.val, axis=1) == y_test.val)
     print(f"Before training test accuracy: {accuracy:.2f}")
     for _ in range(100):
-
-    model.train(True)
-        for X_batch, y_batch in batches_trian:
+        model.train(True)
+        for X_batch, y_batch in batches_train:
             optimiser.zero_grad()
             logits = model(X_batch)
             loss = loss_fn(logits, y_batch)
