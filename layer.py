@@ -109,25 +109,45 @@ class Sigmoid(Layer):
 class Softmax(Layer):
 
     def __init__(self, features, num_outputs, initialise=kaiming_uniform):
-        self.weights = Tensor(initialise(features, num_outputs), True)
-        self.bias = Tensor(np.zeros((1, num_outputs)), True)
+        self.weights = Tensor(initialise(num_outputs, features), True)
+        self.bias = Tensor(np.zeros((num_outputs, 1)), True)
 
     def forward(self, x) -> Tensor:
         # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
         # May not be an issue for now, but might consider doing some normalisation to ensure consistency
         # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
-        # TODO: might be the wrong way around
-        weighted = x @ self.weights + self.bias
+        weighted = self.weights.val @ x.val + self.bias.val
 
         out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1), x.requires_grad)
         def _backward():
-            diag = np.array([np.diag(out.val[i]) for i in range(len(out.val))])
-            outer = np.array([np.outer(out.val[i], out.val[i]) for i in range(len(out.val))])
-            jacobian_gradient = np.array([diag[i] - outer[i] for i in range(len(diag))])
-            for i in range(len(x.val)):
-                self.weights.grad += jacobian_gradient[i] * x.val[i]
-                self.bias.grad += np.sum(jacobian_gradient[i], axis=1)
-            x.grad += unbroadcast(x.grad @ self.weights.val, x.shape)
+            # do the following for each output value
+            for idx in len(out.val):
+                output_val = out.val[idx]
+                # get the derivative of the softmax output w.r.t the softmax input logits
+                dS_dz = np.diag(output_val.squeeze()) - np.outer(output_val, output_val)
+
+                # create the weight gradient update matrix, and fill it with the raw input values
+                # this will have shape (num_softmax_outputs, num_softmax_outputs * num_raw_inputs), which is the number of weights we have
+                # each row represents how each output wants to change the weights
+                dW_rows = np.repeat(x.val[idx], num_outputs, axis=0)
+                for i in range(num_outputs - 1):
+                    dW_rows = np.concatenate((dW_rows, np.repeat(x.val[i], num_outputs, axis=0)), axis=1)
+
+                # multiply each input value by each softmax derivative to calculate dS/dz * dz/dW = dS/dW
+                for i in range(len(dS_dz)):
+                    dW_rows[:, features * i: features * (i + 1)] *= dS_dz[i].reshape(len(dS_dz[i]), 1)
+
+                # now, add up the gradients of each weight, where in each row t, the gradient for W_ij is given by i * features + j (assuming zero indexing)
+                for output_t in range(num_outputs):
+                    for i in range(num_outputs):
+                        for j in range(features):
+                            self.weights.grad[i, j] += dW_rows[output_t, (i * features) + j]
+
+                # god damn finally, now just need to update the weight of x itself
+
+            
+            
+            # x.grad += unbroadcast(x.grad @ self.weights.val, x.shape)
 
         out._backward = _backward
         out._prev = {x}
