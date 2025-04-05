@@ -80,7 +80,7 @@ class Dropout(Layer):
         if not self.training or self.p == 0:
             return x
 
-        mask = np.random.binomial(1, 1 - self.p, x.shape)
+        mask = np.random.binomial(1, 1 - self.p, x.shape) / (1 - self.p)
         out = Tensor(x.val * mask, x.requires_grad)
 
         def _backward():
