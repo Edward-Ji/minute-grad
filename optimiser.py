@@ -48,8 +48,11 @@ class AdamOptimiser(Optimiser):
                 self.beta2 * self.second_moment[tensor]
                 + (1 - self.beta2) * tensor.grad**2
             )
+            # Bias correction
+            first_moment_corrected = self.first_moment[tensor] / (1 - self.beta1)
+            second_moment_corrected = self.second_moment[tensor] / (1 - self.beta2)
             tensor.val -= (
                 self.learning_rate
-                * self.first_moment[tensor]
-                / (np.sqrt(self.second_moment[tensor]) + self.epsilon)
+                * first_moment_corrected
+                / (np.sqrt(second_moment_corrected) + self.epsilon)
             )
