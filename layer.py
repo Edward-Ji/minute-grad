@@ -80,7 +80,7 @@ class Dropout(Layer):
         if not self.training or self.p == 0:
             return x
 
-        mask = np.random.binomial(1, 1 - self.p, x.shape)
+        mask = np.random.binomial(1, 1 - self.p, x.shape) / (1 - self.p)
         out = Tensor(x.val * mask, x.requires_grad)
 
         def _backward():
@@ -195,27 +195,41 @@ class MeanSquaredError(Layer):
 
 class CrossEntropyLoss(Layer):
 
-    def __init__(self, epsilon=1e-15):
+    def __init__(self, epsilon=1e-15, label_smoothing=0.0):
         super().__init__()
         self.epsilon = epsilon
+        self.label_smoothing = label_smoothing
 
     def forward(self, logits: Tensor, labels: Tensor) -> Tensor:
-        n_sample = logits.val.shape[0]
+        n_sample, n_class = logits.val.shape
 
         # THIS SECTION IS SOFTMAX
         exp_logits = np.exp(logits.val)
         sum_exp = np.sum(exp_logits, axis=1, keepdims=True)
         probs = exp_logits / sum_exp
 
-        # THIS SECTION IS CROSS-ENTROPY LOSS
-        error = -np.log(probs[np.arange(n_sample), labels.val] + self.epsilon)
-        out = Tensor(np.mean(error), logits.requires_grad)
+        # Create one-hot encoding for labels.
+        one_hot = np.zeros_like(probs)
+        one_hot[np.arange(n_sample), labels.val] = 1
+
+        # Apply label smoothing if required.
+        if self.label_smoothing > 0:
+            smooth_labels = (
+                one_hot * (1 - self.label_smoothing)
+                + self.label_smoothing / n_class
+            )
+        else:
+            smooth_labels = one_hot
+
+        # Compute the per-sample losses and take the mean.
+        losses = -np.sum(smooth_labels * np.log(probs + self.epsilon), axis=1)
+        loss_value = np.mean(losses)
+        out = Tensor(loss_value, logits.requires_grad)
 
         def _backward():
             if logits.requires_grad:
-                true_probs = np.zeros_like(probs)
-                true_probs[np.arange(n_sample), labels.val] = 1
-                logits.grad += probs - true_probs
+                # The gradient is (probs - smooth_labels) averaged over the samples.
+                logits.grad += (probs - smooth_labels) / n_sample
 
         out._backward = _backward
         out._prev = {logits}
