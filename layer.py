@@ -80,7 +80,7 @@ class Dropout(Layer):
         if not self.training or self.p == 0:
             return x
 
-        mask = np.random.binomial(1, 1 - self.p, x.shape)
+        mask = np.random.binomial(1, 1 - self.p, x.shape) / (1 - self.p)
         out = Tensor(x.val * mask, x.requires_grad)
 
         def _backward():
@@ -108,14 +108,46 @@ class Sigmoid(Layer):
 
 class Softmax(Layer):
 
+    def __init__(self, features, num_outputs, initialise=kaiming_uniform):
+        self.weights = Tensor(initialise(num_outputs, features), True)
+        self.bias = Tensor(np.zeros((num_outputs, 1)), True)
+
     def forward(self, x) -> Tensor:
         # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
         # May not be an issue for now, but might consider doing some normalisation to ensure consistency
         # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
-        out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val)), x.requires_grad)
+        weighted = self.weights.val @ x.val + self.bias.val
 
+        out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1), x.requires_grad)
         def _backward():
-            x.grad += unbroadcast((np.diag(out.val) - np.outer(out.val, out.val)), x.shape)
+            # do the following for each output value
+            for idx in len(out.val):
+                output_val = out.val[idx]
+                # get the derivative of the softmax output w.r.t the softmax input logits
+                dS_dz = np.diag(output_val.squeeze()) - np.outer(output_val, output_val)
+
+                # create the weight gradient update matrix, and fill it with the raw input values
+                # this will have shape (num_softmax_outputs, num_softmax_outputs * num_raw_inputs), which is the number of weights we have
+                # each row represents how each output wants to change the weights
+                dW_rows = np.repeat(x.val[idx], num_outputs, axis=0)
+                for i in range(num_outputs - 1):
+                    dW_rows = np.concatenate((dW_rows, np.repeat(x.val[i], num_outputs, axis=0)), axis=1)
+
+                # multiply each input value by each softmax derivative to calculate dS/dz * dz/dW = dS/dW
+                for i in range(len(dS_dz)):
+                    dW_rows[:, features * i: features * (i + 1)] *= dS_dz[i].reshape(len(dS_dz[i]), 1)
+
+                # now, add up the gradients of each weight, where in each row t, the gradient for W_ij is given by i * features + j (assuming zero indexing)
+                for output_t in range(num_outputs):
+                    for i in range(num_outputs):
+                        for j in range(features):
+                            self.weights.grad[i, j] += dW_rows[output_t, (i * features) + j]
+
+                # god damn finally, now just need to update the weight of x itself
+
+            
+            
+            # x.grad += unbroadcast(x.grad @ self.weights.val, x.shape)
 
         out._backward = _backward
         out._prev = {x}
@@ -188,24 +220,40 @@ class MeanSquaredError(Layer):
 
 class CrossEntropyLoss(Layer):
 
-    def __init__(self, epsilon=1e-15):
+    def __init__(self, epsilon=1e-15, label_smoothing=0.0):
         super().__init__()
         self.epsilon = epsilon
+        self.label_smoothing = label_smoothing
 
     def forward(self, logits: Tensor, labels: Tensor) -> Tensor:
-        n_sample = logits.val.shape[0]
+        n_sample, n_class = logits.val.shape
 
         exp_logits = np.exp(logits.val)
         sum_exp = np.sum(exp_logits, axis=1, keepdims=True)
         probs = exp_logits / sum_exp
-        error = -np.log(probs[np.arange(n_sample), labels.val] + self.epsilon)
-        out = Tensor(np.mean(error), logits.requires_grad)
+
+        # Create one-hot encoding for labels.
+        one_hot = np.zeros_like(probs)
+        one_hot[np.arange(n_sample), labels.val] = 1
+
+        # Apply label smoothing if required.
+        if self.label_smoothing > 0:
+            smooth_labels = (
+                one_hot * (1 - self.label_smoothing)
+                + self.label_smoothing / n_class
+            )
+        else:
+            smooth_labels = one_hot
+
+        # Compute the per-sample losses and take the mean.
+        losses = -np.sum(smooth_labels * np.log(probs + self.epsilon), axis=1)
+        loss_value = np.mean(losses)
+        out = Tensor(loss_value, logits.requires_grad)
 
         def _backward():
             if logits.requires_grad:
-                true_probs = np.zeros_like(probs)
-                true_probs[np.arange(n_sample), labels.val] = 1
-                logits.grad += probs - true_probs
+                # The gradient is (probs - smooth_labels) averaged over the samples.
+                logits.grad += (probs - smooth_labels) / n_sample
 
         out._backward = _backward
         out._prev = {logits}
