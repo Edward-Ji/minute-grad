@@ -70,8 +70,29 @@ class ReLU(Layer):
         return out
 
 
-class Dropout(Layer):
+class LeakyReLU(Layer):
+    def __init__(self, negative_slope=0.01):
+        super().__init__()
+        self.negative_slope = negative_slope
 
+    def forward(self, x) -> Tensor:
+        out = Tensor(
+            np.where(x.val > 0, x.val, self.negative_slope * x.val), x.requires_grad
+        )
+
+        def _backward():
+            if x.requires_grad:
+                x.grad += unbroadcast(
+                    out.grad * np.where(out.val > 0, 1, self.negative_slope), x.shape
+                )
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
+
+
+class Dropout(Layer):
     def __init__(self, p=0.5):
         super().__init__()
         self.p = p
