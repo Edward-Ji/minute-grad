@@ -70,8 +70,29 @@ class ReLU(Layer):
         return out
 
 
-class Dropout(Layer):
+class LeakyReLU(Layer):
+    def __init__(self, negative_slope=0.01):
+        super().__init__()
+        self.negative_slope = negative_slope
 
+    def forward(self, x) -> Tensor:
+        out = Tensor(
+            np.where(x.val > 0, x.val, self.negative_slope * x.val), x.requires_grad
+        )
+
+        def _backward():
+            if x.requires_grad:
+                x.grad += unbroadcast(
+                    out.grad * np.where(out.val > 0, 1, self.negative_slope), x.shape
+                )
+
+        out._backward = _backward
+        out._prev = {x}
+
+        return out
+
+
+class Dropout(Layer):
     def __init__(self, p=0.5):
         super().__init__()
         self.p = p
@@ -107,47 +128,22 @@ class Sigmoid(Layer):
 
 
 class Softmax(Layer):
-
-    def __init__(self, features, num_outputs, initialise=kaiming_uniform):
-        self.weights = Tensor(initialise(num_outputs, features), True)
-        self.bias = Tensor(np.zeros((num_outputs, 1)), True)
-
+    # DEPRECIATED CLASS
+    # dont use this, the cross-entropy loss already has softmax built into it
     def forward(self, x) -> Tensor:
         # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
         # May not be an issue for now, but might consider doing some normalisation to ensure consistency
         # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
-        weighted = self.weights.val @ x.val + self.bias.val
 
         out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1), x.requires_grad)
         def _backward():
             # do the following for each output value
-            for idx in len(out.val):
+            # this could probably be done more clearly with numpy operations but im just trying to survive rn
+            for idx in range(len(out.val)):
                 output_val = out.val[idx]
                 # get the derivative of the softmax output w.r.t the softmax input logits
                 dS_dz = np.diag(output_val.squeeze()) - np.outer(output_val, output_val)
-
-                # create the weight gradient update matrix, and fill it with the raw input values
-                # this will have shape (num_softmax_outputs, num_softmax_outputs * num_raw_inputs), which is the number of weights we have
-                # each row represents how each output wants to change the weights
-                dW_rows = np.repeat(x.val[idx], num_outputs, axis=0)
-                for i in range(num_outputs - 1):
-                    dW_rows = np.concatenate((dW_rows, np.repeat(x.val[i], num_outputs, axis=0)), axis=1)
-
-                # multiply each input value by each softmax derivative to calculate dS/dz * dz/dW = dS/dW
-                for i in range(len(dS_dz)):
-                    dW_rows[:, features * i: features * (i + 1)] *= dS_dz[i].reshape(len(dS_dz[i]), 1)
-
-                # now, add up the gradients of each weight, where in each row t, the gradient for W_ij is given by i * features + j (assuming zero indexing)
-                for output_t in range(num_outputs):
-                    for i in range(num_outputs):
-                        for j in range(features):
-                            self.weights.grad[i, j] += dW_rows[output_t, (i * features) + j]
-
-                # god damn finally, now just need to update the weight of x itself
-
-            
-            
-            # x.grad += unbroadcast(x.grad @ self.weights.val, x.shape)
+                out.grad[idx] += np.sum(dS_dz, axis=0)
 
         out._backward = _backward
         out._prev = {x}
@@ -167,7 +163,7 @@ class BatchNormalisation(Layer):
         mu = np.mean(x.val, axis=0)
         sigma_squared = np.var(x.val, axis=0)
         batch_size = len(x.val)
-        normalised_data = Tensor((x.val - mu) / np.sqrt(sigma_squared + self.epsilon, axis=0), x.requires_grad)
+        normalised_data = (x.val - mu) / np.sqrt(sigma_squared + self.epsilon)
         # We do an elementwise multiplication here with the weights because normalised data is a tensor containing multiple input samples
         # Therefore, we want to multiply the weight array with each respective column in the tensor
         # e.g. if our input data is
@@ -184,11 +180,11 @@ class BatchNormalisation(Layer):
         # input * weights = [[10, 40, 90]
         #                    [40, 100, 180]
         #                    [70, 160, 270]]
-        out = normalised_data * self.weight + self.bias 
+        out = Tensor(normalised_data * self.weights.val + self.bias.val, x.requires_grad)
 
         def _backward():
             beta_gradient = np.sum(out.grad, axis=0)
-            gamma_gradient = np.sum(out.grad * normalised_data.val, axis=0)
+            gamma_gradient = np.sum(out.grad * normalised_data, axis=0)
             self.bias.grad += beta_gradient
             self.weights.grad += gamma_gradient
 
@@ -228,6 +224,7 @@ class CrossEntropyLoss(Layer):
     def forward(self, logits: Tensor, labels: Tensor) -> Tensor:
         n_sample, n_class = logits.val.shape
 
+        # THIS SECTION IS SOFTMAX
         exp_logits = np.exp(logits.val)
         sum_exp = np.sum(exp_logits, axis=1, keepdims=True)
         probs = exp_logits / sum_exp
