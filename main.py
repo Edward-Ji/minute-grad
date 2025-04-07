@@ -1,19 +1,19 @@
 import numpy as np
 from tqdm.auto import tqdm
 
-from layer import Composite, CrossEntropyLoss, Dropout, LeakyReLU, Linear
+from layer import Composite, CrossEntropyLoss, Dropout, ReLU, Linear
 from optimiser import AdamOptimiser
 from tensor import Tensor
 from util import BatchGenerator, xavier_uniform
 
 
 def main():
-    X_train = Tensor(np.load("./data/train_data.npy"))
+    X_train = Tensor(np.load("./data/train_data.npy", allow_pickle=True))
     y_train = Tensor(np.load("./data/train_label.npy").squeeze())
     X_test = Tensor(np.load("./data/test_data.npy"))
     y_test = Tensor(np.load("./data/test_label.npy").squeeze())
 
-    epochs = 100
+    epochs = 50
     batch_size = 64
 
     batches = BatchGenerator(X_train, y_train, batch_size=batch_size)
@@ -21,13 +21,13 @@ def main():
     model = Composite(
         [
             Linear(128, 512),
-            LeakyReLU(),
+            ReLU(),
             Dropout(0.3),
             Linear(512, 256),
-            LeakyReLU(),
+            ReLU(),
             Dropout(0.3),
             Linear(256, 128),
-            LeakyReLU(),
+            ReLU(),
             Dropout(0.3),
             Linear(128, 10, initialise=xavier_uniform),
         ]
