@@ -224,8 +224,9 @@ class CrossEntropyLoss(Layer):
     def forward(self, logits: Tensor, labels: Tensor) -> Tensor:
         n_sample, n_class = logits.val.shape
 
-        # THIS SECTION IS SOFTMAX
-        exp_logits = np.exp(logits.val)
+        # Integrate numerically stable Softmax into the loss calculation
+        shifted = logits.val - np.max(logits.val, axis=1)
+        exp_logits = np.exp(shifted)
         sum_exp = np.sum(exp_logits, axis=1, keepdims=True)
         probs = exp_logits / sum_exp
 
