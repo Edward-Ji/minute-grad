@@ -5,10 +5,19 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import numpy as np
 
-from layer import Composite, CrossEntropyLoss, ReLU, Linear
+from layer import (
+    BatchNormalisation,
+    Composite,
+    CrossEntropyLoss,
+    LeakyReLU,
+    ReLU,
+    Linear,
+    Dropout,
+    Sigmoid,
+)
 from optimiser import AdamOptimiser
 from tensor import Tensor
-from util import kaiming_uniform, min_max_scale
+from util import kaiming_uniform, min_max_scale, xavier_uniform
 from train_util import train_loop, plot_losses_and_accuracies, save_loss_accuracy
 
 
@@ -107,12 +116,236 @@ width_labels = [
 ]
 
 
+dropout_models = [
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.2),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.4),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.6),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.8),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+]
+
+dropout_labels = [
+    "No Dropout",
+    "0.2 Dropout",
+    "0.4 Dropout",
+    "0.6 Dropout",
+    "0.8 Dropout",
+]
+
+dropout_3l_models = [
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.2),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.2),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.4),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.4),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.6),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.6),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.8),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.8),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+]
+
+dropout_3l_labels = [
+    "No Dropout 3 Layers",
+    "0.2 Dropout 3 Layers",
+    "0.4 Dropout 3 Layers",
+    "0.6 Dropout 3 Layers",
+    "0.8 Dropout 3 Layers",
+]
+
+activation_models = [
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            LeakyReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(
+                128, 192, initialise=xavier_uniform
+            ),  # xavier uniform was created for sigmoid activation whereas Kaiming was developed for ReLU activation.
+            Sigmoid(),
+            Linear(192, 10, initialise=xavier_uniform),
+        ]
+    ),
+]
+
+activation_labels = [
+    "No Activation",
+    "ReLU",
+    "Leaky ReLU",
+    "Sigmoid",
+]
+
+activation_models = [
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            LeakyReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(
+                128, 192, initialise=xavier_uniform
+            ),  # xavier uniform was created for sigmoid activation whereas Kaiming was developed for ReLU activation.
+            Sigmoid(),
+            Linear(192, 10, initialise=xavier_uniform),
+        ]
+    ),
+]
+
+activation_labels = [
+    "No Activation",
+    "ReLU",
+    "Leaky ReLU",
+    "Sigmoid",
+]
+
+batchnorm_models = [
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            BatchNormalisation(192),
+            LeakyReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 192, initialise=kaiming_uniform),
+            LeakyReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
+        ]
+    ),
+]
+
+batchnorm_labels = ["With Batch Normalisation", "Without Batch Normalisation"]
+
+
 experiments = [
     [depth_models, depth_labels],
     [width_models, width_labels],
+    [dropout_models, dropout_labels],
+    [dropout_3l_models, dropout_3l_labels],
+    [activation_models, activation_labels],
+    [batchnorm_models, batchnorm_labels],
 ]
 
-folders = ["./experiments/results/depth_test", "./experiments/results/width_test"]
+folders = [
+    "./experiments/results/depth_test",
+    "./experiments/results/width_test",
+    "./experiments/results/dropout_test",
+    "./experiments/results/dropout_3l_test",
+    "./experiments/results/activation_test",
+    "./experiments/results/batchnorm_test",
+]
 
 
 def run_experiment(folder, models, model_labels):
