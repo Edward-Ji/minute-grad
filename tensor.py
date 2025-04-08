@@ -3,6 +3,20 @@ import numpy as np
 from util import unbroadcast
 
 
+def wrap_numpy(method):
+    def wrapper(obj, *args, **kwargs):
+        out = Tensor(method(obj.val, *args, **kwargs), obj.requires_grad)
+        def _backward():
+            if obj.requires_grad:
+                raise NotImplementedError(
+                    "Backward pass not implemented for this operation."
+                )
+        out._backward = _backward
+        out._prev = {obj}
+        return out
+    return wrapper
+
+
 class Tensor:
     def __init__(self, val, requires_grad=False):
         self.val = np.array(val)
@@ -30,7 +44,7 @@ class Tensor:
             if self.requires_grad:
                 self.grad += unbroadcast(out.grad @ other.val.T, self.shape)
             if other.requires_grad:
-                other.grad = unbroadcast(self.val.T @ out.grad, other.shape)
+                other.grad += unbroadcast(self.val.T @ out.grad, other.shape)
 
         out._backward = _backward
         out._prev = {self, other}
@@ -129,6 +143,11 @@ class Tensor:
         out._prev = {self}
 
         return out
+
+    min = wrap_numpy(np.min)
+    max = wrap_numpy(np.max)
+    mean = wrap_numpy(np.mean)
+    std = wrap_numpy(np.std)
 
     def backward(self):
         self.grad = np.ones_like(self.val)
