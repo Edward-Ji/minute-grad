@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import numpy as np
 
-from layer import Composite, CrossEntropyLoss, ReLU, Linear
+from layer import Composite, CrossEntropyLoss, ReLU, Linear, Dropout
 from optimiser import AdamOptimiser
 from tensor import Tensor
 from util import kaiming_uniform
@@ -15,57 +15,65 @@ from train_util import train_loop, plot_losses_and_accuracies, save_loss_accurac
 models = [
     Composite(
         [
-            Linear(128, 10, initialise=kaiming_uniform),
+            Linear(128, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(192, 10, initialise=kaiming_uniform),
         ]
     ),
     Composite(
         [
-            Linear(128, 128, initialise=kaiming_uniform),
+            Linear(128, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 10, initialise=kaiming_uniform),
+            Dropout(0.2),
+            Linear(192, 192, initialise=kaiming_uniform),
+            ReLU(),
+            Dropout(0.2),
+            Linear(192, 10, initialise=kaiming_uniform),
         ]
     ),
     Composite(
         [
-            Linear(128, 128, initialise=kaiming_uniform),
+            Linear(128, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 128, initialise=kaiming_uniform),
+            Dropout(0.4),
+            Linear(192, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 10, initialise=kaiming_uniform),
+            Dropout(0.4),
+            Linear(192, 10, initialise=kaiming_uniform),
         ]
     ),
     Composite(
         [
-            Linear(128, 128, initialise=kaiming_uniform),
+            Linear(128, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 128, initialise=kaiming_uniform),
+            Dropout(0.6),
+            Linear(192, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 128, initialise=kaiming_uniform),
-            ReLU(),
-            Linear(128, 10, initialise=kaiming_uniform),
+            Dropout(0.6),
+            Linear(192, 10, initialise=kaiming_uniform),
         ]
     ),
     Composite(
         [
-            Linear(128, 128, initialise=kaiming_uniform),
+            Linear(128, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 128, initialise=kaiming_uniform),
+            Dropout(0.8),
+            Linear(192, 192, initialise=kaiming_uniform),
             ReLU(),
-            Linear(128, 128, initialise=kaiming_uniform),
-            ReLU(),
-            Linear(128, 128, initialise=kaiming_uniform),
-            ReLU(),
-            Linear(128, 10, initialise=kaiming_uniform),
+            Dropout(0.8),
+            Linear(192, 10, initialise=kaiming_uniform),
         ]
     ),
 ]
 
 model_labels = [
-    "1 Layer",
-    "2 Layers",
-    "3 Layers",
-    "4 Layers",
-    "5 Layers",
+    "No Dropout 3 Layers",
+    "0.2 Dropout 3 Layers",
+    "0.4 Dropout 3 Layers",
+    "0.6 Dropout 3 Layers",
+    "0.8 Dropout 3 Layers",
 ]
 
 
@@ -106,7 +114,7 @@ def main():
         all_test_loss.append(test_loss)
         all_test_accuracy.append(test_accuracy)
 
-    folder = "./experiments/results/depth_test"
+    folder = "./experiments/results/dropout_3layers_test"
 
     plot_losses_and_accuracies(
         folder + "/train", model_labels, all_training_loss_lst, all_train_acc_lst
