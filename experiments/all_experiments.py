@@ -1,8 +1,6 @@
 import sys
 import os
 
-import tqdm
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import numpy as np
@@ -19,7 +17,7 @@ from layer import (
 )
 from optimiser import AdamOptimiser
 from tensor import Tensor
-from util import kaiming_uniform, min_max_scale, xavier_uniform, standard_scale
+from util import kaiming_uniform, xavier_uniform, standard_scale
 from train_util import train_loop, plot_losses_and_accuracies, save_loss_accuracy
 
 
@@ -342,19 +340,19 @@ batchnorm_labels = ["With Batch Normalisation", "Without Batch Normalisation"]
 experiments = [
     [depth_models, depth_labels],
     [width_models, width_labels],
-    # [dropout_models, dropout_labels],
-    # [dropout_3l_models, dropout_3l_labels],
-    # [activation_models, activation_labels],
-    # [batchnorm_models, batchnorm_labels],
+    [dropout_models, dropout_labels],
+    [dropout_3l_models, dropout_3l_labels],
+    [activation_models, activation_labels],
+    [batchnorm_models, batchnorm_labels],
 ]
 
 folders = [
     "./experiments/results/depth_test",
     "./experiments/results/width_test",
-    # "./experiments/results/dropout_test",
-    # "./experiments/results/dropout_3l_test",
-    # "./experiments/results/activation_test",
-    # "./experiments/results/batchnorm_test",
+    "./experiments/results/dropout_test",
+    "./experiments/results/dropout_3l_test",
+    "./experiments/results/activation_test",
+    "./experiments/results/batchnorm_test",
 ]
 
 
@@ -401,6 +399,8 @@ def run_experiment(folder, models, model_labels):
     save_loss_accuracy(
         folder + "/test",
         model_labels,
+        [x[-1] for x in all_training_loss_lst],
+        [x[-1] for x in all_train_acc_lst],
         all_test_loss,
         all_test_accuracy,
     )

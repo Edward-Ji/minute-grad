@@ -27,9 +27,9 @@ model = Composite(
     ]
 )
 
-epochs = [20, 40, 60, 80, 100]
+epochs = [50, 100, 150]
 
-batches = [1, 2, 4, 8, 16, 32, 64, 128]
+batches = [1, 4, 8, 32, 64, 128]
 
 normalisations = [min_max_scale, standard_scale]
 
@@ -85,6 +85,8 @@ def log_final_test_results(
 
 
 def main():
+    print(AdamOptimiser.__name__)
+
     for (
         epoch,
         batch_size,
