@@ -17,7 +17,7 @@ from layer import (
 from optimiser import AdamOptimiser, GradientDescentOptimiser
 from tensor import Tensor
 from util import kaiming_uniform, min_max_scale, standard_scale
-from train_util import train_loop
+from train_util import save_loss_accuracy, train_loop
 
 model = Composite(
     [
@@ -27,7 +27,7 @@ model = Composite(
     ]
 )
 
-epochs = [50, 100, 150]
+epochs = [10, 20, 40, 60]
 
 batches = [1, 4, 8, 32, 64, 128]
 
@@ -40,97 +40,95 @@ weight_decays = [0.01, 0.001, 0.0001, 0.00001]
 optimisers = [AdamOptimiser, GradientDescentOptimiser]
 
 
-def log_final_test_results(
-    output_file,
-    epoch,
-    batch_size,
-    normalisation_name,
-    learning_rate,
-    weight_decay,
-    optimiser_name,
-    test_loss,
-    test_accuracy,
-):
-    file_exists = os.path.isfile(output_file)
+def main():
+    # Define defaults
+    default_epoch = 20
+    default_batch_size = 8
+    default_normalisation = standard_scale
+    default_learning_rate = 0.001
+    default_weight_decay = 0.001
+    default_optimiser = AdamOptimiser
 
-    with open(output_file, mode="a", newline="") as file:
-        writer = csv.writer(file)
-        if not file_exists:
-            # Write header on first write
-            writer.writerow(
-                [
-                    "Epochs",
-                    "Batch Size",
-                    "Normalisation",
-                    "Learning Rate",
-                    "Weight Decay",
-                    "Optimiser",
-                    "Test Loss",
-                    "Test Accuracy",
-                ]
+    # Define all sweeps
+    sweep_configs = {
+        "epoch": epochs,
+        "batch": batches,
+        "normalisation": normalisations,
+        "lr": learning_rates,
+        "wd": weight_decays,
+        "optimiser": optimisers,
+    }
+
+    for sweep_type, sweep_values in sweep_configs.items():
+        all_training_loss_lst = []
+        all_train_acc_lst = []
+
+        all_test_loss = []
+        all_test_accuracy = []
+
+        for value in sweep_values:
+            # Start with defaults
+            epoch = default_epoch
+            batch_size = default_batch_size
+            normalisation = default_normalisation
+            learning_rate = default_learning_rate
+            weight_decay = default_weight_decay
+            optimiser_cls = default_optimiser
+
+            # Override just the parameter we're sweeping
+            if sweep_type == "epoch":
+                epoch = value
+            elif sweep_type == "batch":
+                batch_size = value
+            elif sweep_type == "normalisation":
+                normalisation = value
+            elif sweep_type == "lr":
+                learning_rate = value
+            elif sweep_type == "wd":
+                weight_decay = value
+            elif sweep_type == "optimiser":
+                optimiser_cls = value
+
+            # Load data
+            X_train = Tensor(normalisation(np.load("./data/train_data.npy")))
+            y_train = Tensor(np.load("./data/train_label.npy").squeeze())
+            X_test = Tensor(normalisation(np.load("./data/test_data.npy")))
+            y_test = Tensor(np.load("./data/test_label.npy").squeeze())
+
+            optimiser = optimiser_cls(
+                model.get_all_tensors(),
+                learning_rate=learning_rate,
+                weight_decay=weight_decay,
             )
+            loss_fn = CrossEntropyLoss(label_smoothing=0.3)
 
-        writer.writerow(
-            [
+            # Train
+            train_loss_lst, train_acc_lst, test_loss, test_accuracy = train_loop(
+                X_train,
+                y_train,
+                X_test,
+                y_test,
                 epoch,
                 batch_size,
-                normalisation_name,
-                learning_rate,
-                weight_decay,
-                optimiser_name,
-                test_loss,
-                test_accuracy,
-            ]
-        )
+                model,
+                optimiser,
+                loss_fn,
+            )
 
+            all_training_loss_lst.append(train_loss_lst)
+            all_train_acc_lst.append(train_acc_lst)
 
-def main():
-    print(AdamOptimiser.__name__)
+            all_test_loss.append(test_loss)
+            all_test_accuracy.append(test_accuracy)
 
-    for (
-        epoch,
-        batch_size,
-        normalisation,
-        learning_rate,
-        weight_decay,
-        optimiser,
-    ) in product(
-        epochs, batches, normalisations, learning_rates, weight_decays, optimisers
-    ):
-        X_train = Tensor(normalisation(np.load("./data/train_data.npy")))
-        y_train = Tensor(np.load("./data/train_label.npy").squeeze())
-        X_test = Tensor(normalisation(np.load("./data/test_data.npy")))
-        y_test = Tensor(np.load("./data/test_label.npy").squeeze())
-
-        optimiser = optimiser(
-            model.get_all_tensors(),
-            learning_rate=learning_rate,
-            weight_decay=weight_decay,
-        )
-        loss_fn = CrossEntropyLoss(label_smoothing=0.3)
-
-        _, _, test_loss, test_accuracy = train_loop(
-            X_train,
-            y_train,
-            X_test,
-            y_test,
-            epoch,
-            batch_size,
-            model,
-            optimiser,
-            loss_fn,
-        )
-
-        log_final_test_results(
-            "./experiments/results/hyperparam_log.csv",
-            epoch,
-            batch_size,
-            normalisation.__name__,
-            learning_rate,
-            weight_decay,
-            optimiser.__name__,
-            test_loss,
-            test_accuracy,
+        folder = "./experiments/results/"
+        save_loss_accuracy(
+            folder + sweep_type,
+            sweep_values,
+            [x[-1] for x in all_training_loss_lst],
+            [x[-1] for x in all_train_acc_lst],
+            all_test_loss,
+            all_test_accuracy,
         )
 
 

@@ -2,7 +2,6 @@ import numpy as np
 
 
 class Optimiser:
-
     def __init__(self, tensors):
         self.tensors = list(tensors)
 
@@ -12,6 +11,7 @@ class Optimiser:
 
 
 class GradientDescentOptimiser(Optimiser):
+    name = "SGD"
 
     def __init__(self, tensors, learning_rate=1e-3, weight_decay=0.0):
         super().__init__(tensors)
@@ -26,6 +26,7 @@ class GradientDescentOptimiser(Optimiser):
 
 
 class AdamOptimiser(Optimiser):
+    name = "Adam"
 
     def __init__(
         self,
