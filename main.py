@@ -13,6 +13,8 @@ def main():
     X_test = Tensor(np.load("./data/test_data.npy"))
     y_test = Tensor(np.load("./data/test_label.npy").squeeze())
 
+    print(X_test)
+
     epochs = 100
     batch_size = 64
 
