@@ -278,45 +278,6 @@ activation_labels = [
     "Sigmoid",
 ]
 
-activation_models = [
-    Composite(
-        [
-            Linear(128, 192, initialise=kaiming_uniform),
-            Linear(192, 10, initialise=kaiming_uniform),
-        ]
-    ),
-    Composite(
-        [
-            Linear(128, 192, initialise=kaiming_uniform),
-            ReLU(),
-            Linear(192, 10, initialise=kaiming_uniform),
-        ]
-    ),
-    Composite(
-        [
-            Linear(128, 192, initialise=kaiming_uniform),
-            LeakyReLU(),
-            Linear(192, 10, initialise=kaiming_uniform),
-        ]
-    ),
-    Composite(
-        [
-            Linear(
-                128, 192, initialise=xavier_uniform
-            ),  # xavier uniform was created for sigmoid activation whereas Kaiming was developed for ReLU activation.
-            Sigmoid(),
-            Linear(192, 10, initialise=xavier_uniform),
-        ]
-    ),
-]
-
-activation_labels = [
-    "No Activation",
-    "ReLU",
-    "Leaky ReLU",
-    "Sigmoid",
-]
-
 batchnorm_models = [
     Composite(
         [
