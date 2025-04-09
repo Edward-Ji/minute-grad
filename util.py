@@ -65,6 +65,21 @@ def train_test_split(X: NDArray, y: NDArray, test_size: float):
     return X[train_indices], y[train_indices], X[test_indices], y[test_indices]
 
 
+def min_max_scale(X: NDArray, min_val: float = 0.0, max_val: float = 1.0):
+    min_X = X.min(axis=0)
+    max_X = X.max(axis=0)
+    scale = (max_val - min_val) / (max_X - min_X)
+    X_scaled = min_val + scale * (X - min_X)
+    return X_scaled
+
+
+def standard_scale(X: NDArray):
+    mean_X = X.mean(axis=0)
+    std_X = X.std(axis=0)
+    X_scaled = (X - mean_X) / std_X
+    return X_scaled
+
+
 def load_data(data_path: Path):
     X_train = np.load(data_path / "train_data.npy")
     y_train = np.load(data_path / "train_label.npy")
