@@ -1,3 +1,3 @@
-Model,Test Loss,Test Accuracy
-With Batch Normalisation,1.9088126119930384,0.516
-Without Batch Normalisation,1.9079838403625846,0.5197
+Model,Training Loss,Training Accuracy,Test Loss,Test Accuracy
+With Batch Normalisation,1.7116246378253426,0.6824048913043478,1.9027997819529705,0.5185
+Without Batch Normalisation,1.7010515133090376,0.6962715792838875,1.9118736144625637,0.5193

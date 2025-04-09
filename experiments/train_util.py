@@ -27,7 +27,6 @@ def train_loop(
         for X_batch, y_batch in batches:
             optimiser.zero_grad()
             logits = model(X_batch)
-            # print(logits, y_batch)
             loss = loss_fn(logits, y_batch)
             loss.backward()
             optimiser.optimise()
@@ -106,9 +105,19 @@ def plot_losses(filename, model_labels, training_losses):
     plt.close()
 
 
-def save_loss_accuracy(filename, labels, losses, accuracies):
+def save_loss_accuracy(filename, labels, train_loss, train_acc, losses, accuracies):
     with open(f"{filename}.csv", "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["Model", "Test Loss", "Test Accuracy"])
-        for label, loss, acc in zip(labels, losses, accuracies):
-            writer.writerow([label, loss, acc])
+        writer.writerow(
+            [
+                "Model",
+                "Training Loss",
+                "Training Accuracy",
+                "Test Loss",
+                "Test Accuracy",
+            ]
+        )
+        for label, t_loss, t_acc, loss, acc in zip(
+            labels, train_loss, train_acc, losses, accuracies
+        ):
+            writer.writerow([label, t_loss, t_acc, loss, acc])

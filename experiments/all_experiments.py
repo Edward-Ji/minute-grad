@@ -1,8 +1,6 @@
 import sys
 import os
 
-import tqdm
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import numpy as np
@@ -19,7 +17,7 @@ from layer import (
 )
 from optimiser import AdamOptimiser
 from tensor import Tensor
-from util import kaiming_uniform, min_max_scale, xavier_uniform, standard_scale
+from util import kaiming_uniform, xavier_uniform, standard_scale
 from train_util import train_loop, plot_losses_and_accuracies, save_loss_accuracy
 
 
@@ -121,6 +119,7 @@ width_labels = [
     "128 Neurons",
     "192 Neurons",
     "256 Neurons",
+    "384 Neurons",
     "512 Neurons",
 ]
 
@@ -361,6 +360,8 @@ def run_experiment(folder, models, model_labels):
     save_loss_accuracy(
         folder + "/test",
         model_labels,
+        [x[-1] for x in all_training_loss_lst],
+        [x[-1] for x in all_train_acc_lst],
         all_test_loss,
         all_test_accuracy,
     )
