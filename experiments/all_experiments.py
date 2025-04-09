@@ -121,6 +121,7 @@ width_labels = [
     "128 Neurons",
     "192 Neurons",
     "256 Neurons",
+    "384 Neurons",
     "512 Neurons",
 ]
 
@@ -341,19 +342,19 @@ batchnorm_labels = ["With Batch Normalisation", "Without Batch Normalisation"]
 experiments = [
     [depth_models, depth_labels],
     [width_models, width_labels],
-    [dropout_models, dropout_labels],
-    [dropout_3l_models, dropout_3l_labels],
-    [activation_models, activation_labels],
-    [batchnorm_models, batchnorm_labels],
+    # [dropout_models, dropout_labels],
+    # [dropout_3l_models, dropout_3l_labels],
+    # [activation_models, activation_labels],
+    # [batchnorm_models, batchnorm_labels],
 ]
 
 folders = [
     "./experiments/results/depth_test",
     "./experiments/results/width_test",
-    "./experiments/results/dropout_test",
-    "./experiments/results/dropout_3l_test",
-    "./experiments/results/activation_test",
-    "./experiments/results/batchnorm_test",
+    # "./experiments/results/dropout_test",
+    # "./experiments/results/dropout_3l_test",
+    # "./experiments/results/activation_test",
+    # "./experiments/results/batchnorm_test",
 ]
 
 
