@@ -1,6 +1,8 @@
 import sys
 import os
 
+import tqdm
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import numpy as np
@@ -17,7 +19,7 @@ from layer import (
 )
 from optimiser import AdamOptimiser
 from tensor import Tensor
-from util import kaiming_uniform, min_max_scale, xavier_uniform
+from util import kaiming_uniform, min_max_scale, xavier_uniform, standard_scale
 from train_util import train_loop, plot_losses_and_accuracies, save_loss_accuracy
 
 
@@ -97,6 +99,13 @@ width_models = [
             Linear(128, 256, initialise=kaiming_uniform),
             ReLU(),
             Linear(256, 10, initialise=kaiming_uniform),
+        ]
+    ),
+    Composite(
+        [
+            Linear(128, 384, initialise=kaiming_uniform),
+            ReLU(),
+            Linear(384, 10, initialise=kaiming_uniform),
         ]
     ),
     Composite(
@@ -356,10 +365,10 @@ def run_experiment(folder, models, model_labels):
     all_test_accuracy = []
 
     for model in models:
-        X_train = min_max_scale(Tensor(np.load("./data/train_data.npy")))
-        y_train = min_max_scale(Tensor(np.load("./data/train_label.npy").squeeze()))
-        X_test = min_max_scale(Tensor(np.load("./data/test_data.npy")))
-        y_test = min_max_scale(Tensor(np.load("./data/test_label.npy").squeeze()))
+        X_train = Tensor(standard_scale(np.load("./data/train_data.npy")))
+        y_train = Tensor(np.load("./data/train_label.npy").squeeze())
+        X_test = Tensor(standard_scale(np.load("./data/test_data.npy")))
+        y_test = Tensor(np.load("./data/test_label.npy").squeeze())
 
         epochs = 50
         batch_size = 64

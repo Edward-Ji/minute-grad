@@ -8,7 +8,6 @@ from util import kaiming_uniform, unbroadcast
 
 
 class Layer:
-
     def __init__(self):
         self.training = True
 
@@ -35,13 +34,11 @@ class Layer:
 
 
 class Identity(Layer):
-
     def forward(self, x) -> Tensor:
         return x
 
 
 class Linear(Layer):
-
     def __init__(self, no_input, no_output, initialise=kaiming_uniform):
         super().__init__()
 
@@ -57,7 +54,6 @@ class Linear(Layer):
 
 
 class ReLU(Layer):
-
     def forward(self, x) -> Tensor:
         out = Tensor(np.maximum(x.val, 0), x.requires_grad)
 
@@ -114,7 +110,6 @@ class Dropout(Layer):
 
 
 class Sigmoid(Layer):
-
     def forward(self, x) -> Tensor:
         out = Tensor(1 / (1 + np.exp(-x.val)), x.requires_grad)
 
@@ -135,7 +130,11 @@ class Softmax(Layer):
         # May not be an issue for now, but might consider doing some normalisation to ensure consistency
         # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
 
-        out = Tensor(np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1), x.requires_grad)
+        out = Tensor(
+            np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1),
+            x.requires_grad,
+        )
+
         def _backward():
             # do the following for each output value
             # this could probably be done more clearly with numpy operations but im just trying to survive rn
@@ -152,7 +151,6 @@ class Softmax(Layer):
 
 
 class BatchNormalisation(Layer):
-
     def __init__(self, features, epsilon=1e-5, initialise=kaiming_uniform):
         super().__init__()
         self.epsilon = epsilon
@@ -171,16 +169,18 @@ class BatchNormalisation(Layer):
         #          [4, 5, 6]
         #          [7, 8, 9]]
         # (i.e. 3 samples in the batch with 3 features each)
-        
+
         # and our weight/bias is
         # weights = [10, 20, 30]
-        # 
+        #
         # then this represents that the weight for the first feature is 10, the weight for the second feature is 20, etc.
-        # therefore, we want the result to be 
+        # therefore, we want the result to be
         # input * weights = [[10, 40, 90]
         #                    [40, 100, 180]
         #                    [70, 160, 270]]
-        out = Tensor(normalised_data * self.weights.val + self.bias.val, x.requires_grad)
+        out = Tensor(
+            normalised_data * self.weights.val + self.bias.val, x.requires_grad
+        )
 
         def _backward():
             beta_gradient = np.sum(out.grad, axis=0)
@@ -190,9 +190,18 @@ class BatchNormalisation(Layer):
 
             normalised_gradient = out.grad * self.weights.val
             var_inv = 1.0 / np.sqrt(sigma_squared + self.epsilon)
-            var_gradient = np.sum(normalised_gradient * (x.val - mu) * -0.5 * (var_inv ** 3), axis=0)
-            mu_gradient = np.sum(normalised_gradient * -var_inv, axis=0) + var_gradient * np.sum(-2 * (x.val - mu), axis=0) / batch_size
-            x.grad += (normalised_gradient * var_inv) + (var_gradient * 2 * (x.val - mu) / batch_size) + (mu_gradient / batch_size)
+            var_gradient = np.sum(
+                normalised_gradient * (x.val - mu) * -0.5 * (var_inv**3), axis=0
+            )
+            mu_gradient = (
+                np.sum(normalised_gradient * -var_inv, axis=0)
+                + var_gradient * np.sum(-2 * (x.val - mu), axis=0) / batch_size
+            )
+            x.grad += (
+                (normalised_gradient * var_inv)
+                + (var_gradient * 2 * (x.val - mu) / batch_size)
+                + (mu_gradient / batch_size)
+            )
 
         out._backward = _backward
         out._prev = {x}
@@ -201,7 +210,6 @@ class BatchNormalisation(Layer):
 
 
 class MeanSquaredError(Layer):
-
     def forward(self, pred, truth) -> Tensor:
         loss = ((pred.val - truth.val) ** 2).sum() / len(truth)
         out = Tensor(loss, pred.requires_grad)
@@ -215,7 +223,6 @@ class MeanSquaredError(Layer):
 
 
 class CrossEntropyLoss(Layer):
-
     def __init__(self, epsilon=1e-15, label_smoothing=0.0):
         super().__init__()
         self.epsilon = epsilon
@@ -237,8 +244,7 @@ class CrossEntropyLoss(Layer):
         # Apply label smoothing if required.
         if self.label_smoothing > 0:
             smooth_labels = (
-                one_hot * (1 - self.label_smoothing)
-                + self.label_smoothing / n_class
+                one_hot * (1 - self.label_smoothing) + self.label_smoothing / n_class
             )
         else:
             smooth_labels = one_hot
@@ -259,7 +265,6 @@ class CrossEntropyLoss(Layer):
 
 
 class Composite(Layer):
-
     def __init__(self, layers: list[Layer]):
         super().__init__()
         self.layers = layers

@@ -1,0 +1,3 @@
+Model,Test Loss,Test Accuracy
+With Batch Normalisation,1.9088126119930384,0.516
+Without Batch Normalisation,1.9079838403625846,0.5197
