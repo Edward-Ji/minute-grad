@@ -8,6 +8,18 @@ from util import kaiming_uniform, unbroadcast
 
 
 class Layer:
+    """
+    This is the base class for all layers in the neural network. It can also represent a
+    model composed of multiple layers. Any custom layer or model should inherit from
+    this class.
+
+    The `forward` method must be implemented in subclasses to define the forward pass
+    of the layer or model. The `train` method is used to set the layer to training or
+    evaluation mode. The `get_all_tensors` method is used to retrieve all tensors
+    associated with the layer or model. Alternatively, callers can use the Python
+    function call syntax to invoke the `forward` method.
+    """
+
     def __init__(self):
         self.training = True
 
@@ -34,11 +46,21 @@ class Layer:
 
 
 class Identity(Layer):
+    """
+    This is a placeholder layer that returns the input as is.
+    """
+
     def forward(self, x) -> Tensor:
         return x
 
 
 class Linear(Layer):
+    """
+    A linear layer that applies a linear transformation to the input data. Formally, it
+    represents the equation y = Wx + b, where W is the weight matrix, x is the input
+    data, and b is the bias vector. See `util` for initialisation functions.
+    """
+
     def __init__(self, no_input, no_output, initialise=kaiming_uniform):
         super().__init__()
 
@@ -54,6 +76,11 @@ class Linear(Layer):
 
 
 class ReLU(Layer):
+    """
+    The rectified linear unit (ReLU) activation function. It is defined as
+    f(x) = max(0, x).
+    """
+
     def forward(self, x) -> Tensor:
         out = Tensor(np.maximum(x.val, 0), x.requires_grad)
 
@@ -67,6 +94,11 @@ class ReLU(Layer):
 
 
 class LeakyReLU(Layer):
+    """
+    The leaky rectified linear unit (Leaky ReLU) activation function. It is defined as
+    f(x) = x if x > 0 else negative_slope * x, where negative_slope is a small constant.
+    """
+
     def __init__(self, negative_slope=0.01):
         super().__init__()
         self.negative_slope = negative_slope
@@ -89,6 +121,12 @@ class LeakyReLU(Layer):
 
 
 class Dropout(Layer):
+    """
+    The dropout layer randomly sets a fraction of the input units to 0 at each update
+    during training time, which helps prevent overfitting. Here, p is the probability of
+    dropping an input unit.
+    """
+
     def __init__(self, p=0.5):
         super().__init__()
         self.p = p
@@ -110,6 +148,10 @@ class Dropout(Layer):
 
 
 class Sigmoid(Layer):
+    """
+    The sigmoid activation function. It is defined as f(x) = 1 / (1 + exp(-x)).
+    """
+
     def forward(self, x) -> Tensor:
         out = Tensor(1 / (1 + np.exp(-x.val)), x.requires_grad)
 
@@ -122,36 +164,14 @@ class Sigmoid(Layer):
         return out
 
 
-class Softmax(Layer):
-    # DEPRECIATED CLASS
-    # dont use this, the cross-entropy loss already has softmax built into it
-    def forward(self, x) -> Tensor:
-        # Note: calculating this may cause issues if the values in x get fairly large (even up to 1000 can cause issues)
-        # May not be an issue for now, but might consider doing some normalisation to ensure consistency
-        # See https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative for more details
-
-        out = Tensor(
-            np.exp(x.val) / np.sum(np.exp(x.val), axis=1).reshape(len(x.val), 1),
-            x.requires_grad,
-        )
-
-        def _backward():
-            # do the following for each output value
-            # this could probably be done more clearly with numpy operations but im just trying to survive rn
-            for idx in range(len(out.val)):
-                output_val = out.val[idx]
-                # get the derivative of the softmax output w.r.t the softmax input logits
-                dS_dz = np.diag(output_val.squeeze()) - np.outer(output_val, output_val)
-                out.grad[idx] += np.sum(dS_dz, axis=0)
-
-        out._backward = _backward
-        out._prev = {x}
-
-        return out
-
-
 class BatchNormalisation(Layer):
-    def __init__(self, features, epsilon=1e-5, initialise=kaiming_uniform):
+    """
+    This layer normalises the input data using batch statistics. It computes the mean
+    and variance of the input data over the batch dimension and scales the data feature
+    wise. The input data is expected to be in the shape (batch_size, features).
+    """
+
+    def __init__(self, features, epsilon=1e-5):
         super().__init__()
         self.epsilon = epsilon
         self.weights = Tensor(np.ones((1, features)), True)
@@ -210,6 +230,12 @@ class BatchNormalisation(Layer):
 
 
 class MeanSquaredError(Layer):
+    """
+    The mean squared error (MSE) loss function. It is defined as the average of the
+    squared differences between the predicted and true values. This is a common loss
+    function used in regression tasks.
+    """
+
     def forward(self, pred, truth) -> Tensor:
         loss = ((pred.val - truth.val) ** 2).sum() / len(truth)
         out = Tensor(loss, pred.requires_grad)
@@ -223,6 +249,18 @@ class MeanSquaredError(Layer):
 
 
 class CrossEntropyLoss(Layer):
+    """
+    The cross-entropy loss function. It computes the difference between the predicted
+    probability distribution and the true distribution. It expects logits (before
+    softmax) as input and applies the softmax function internally. The labels are
+    expected to be class indices [0, n_classes). The loss is computed as the negative
+    log likelihood of the true class.
+
+    A small epsilon value is added to the log function to prevent numerical instability
+    when the predicted probabilities are very close to zero. The label smoothing
+    parameter represents the degree of smoothing applied to the labels.
+    """
+
     def __init__(self, epsilon=1e-15, label_smoothing=0.0):
         super().__init__()
         self.epsilon = epsilon
@@ -265,6 +303,11 @@ class CrossEntropyLoss(Layer):
 
 
 class Composite(Layer):
+    """
+    A composite layer that represents a model composed of multiple layers. It simply
+    applies each layer in sequence to the input data.
+    """
+
     def __init__(self, layers: list[Layer]):
         super().__init__()
         self.layers = layers
