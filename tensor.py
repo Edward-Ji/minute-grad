@@ -1,17 +1,27 @@
+from typing import Callable
+
 import numpy as np
+from numpy.typing import NDArray
 
 from util import unbroadcast
 
 
 class Tensor:
-    def __init__(self, val, requires_grad=False):
-        self.val = np.array(val)
+    """
+    A simple tensor class that supports basic operations and automatic differentiation.
+    This class is designed to be used for building and training neural networks.
+    It supports operations like addition, subtraction, multiplication, and matrix
+    multiplication. It also supports backpropagation through the computational graph
+    to compute gradients for optimization.
+    """
+    def __init__(self, val: NDArray, requires_grad: bool = False):
+        self.val: NDArray = np.array(val)
 
-        self.requires_grad = requires_grad
-        self.grad = np.zeros_like(self.val)
+        self.requires_grad: bool = requires_grad
+        self.grad: NDArray = np.zeros_like(self.val)
 
-        self._backward = lambda: None
-        self._prev = set()
+        self._backward: Callable[[], None] = lambda: None
+        self._prev: set[Tensor] = set()
 
     def __len__(self):
         return len(self.val)
@@ -131,6 +141,11 @@ class Tensor:
         return out
 
     def backward(self):
+        """
+        Backpropagation through the computational graph to compute gradients.
+        This method traverses the graph in reverse topological sorting order, applying
+        the chain rule to compute gradients for each tensor.
+        """
         self.grad = np.ones_like(self.val)
 
         topo = []
