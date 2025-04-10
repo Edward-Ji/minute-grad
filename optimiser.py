@@ -49,6 +49,7 @@ class AdamOptimiser(Optimiser):
         self.second_moment = {
             tensor: np.zeros_like(tensor.grad) for tensor in self.tensors
         }
+        self.iterations = 1
 
     def optimise(self):
         for tensor in self.tensors:
@@ -62,8 +63,8 @@ class AdamOptimiser(Optimiser):
                 + (1 - self.beta2) * tensor.grad**2
             )
             # Bias correction
-            first_moment_corrected = self.first_moment[tensor] / (1 - self.beta1)
-            second_moment_corrected = self.second_moment[tensor] / (1 - self.beta2)
+            first_moment_corrected = self.first_moment[tensor] / (1 - pow(self.beta1, self.iterations))
+            second_moment_corrected = self.second_moment[tensor] / (1 - pow(self.beta2, self.iterations))
             tensor.val -= (
                 self.learning_rate
                 * first_moment_corrected

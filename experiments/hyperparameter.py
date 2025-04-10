@@ -12,18 +12,19 @@ from layer import (
     Composite,
     CrossEntropyLoss,
     ReLU,
+    LeakyReLU,
     Linear,
 )
 from optimiser import AdamOptimiser, GradientDescentOptimiser
 from tensor import Tensor
 from util import kaiming_uniform, min_max_scale, standard_scale
-from train_util import save_loss_accuracy, train_loop
+from train_util import save_loss_accuracy, train_loop, plot_losses_and_accuracies
 
 model = Composite(
     [
-        Linear(128, 192, initialise=kaiming_uniform),
-        ReLU(),
-        Linear(192, 10, initialise=kaiming_uniform),
+        Linear(128, 256, initialise=kaiming_uniform),
+        LeakyReLU(),
+        Linear(256, 10, initialise=kaiming_uniform),
     ]
 )
 
@@ -66,6 +67,8 @@ def main():
         all_test_loss = []
         all_test_accuracy = []
 
+        model_labels = []
+
         for value in sweep_values:
             # Start with defaults
             epoch = default_epoch
@@ -78,22 +81,28 @@ def main():
             # Override just the parameter we're sweeping
             if sweep_type == "epoch":
                 epoch = value
+                model_labels.append(f'{value} epochs')
             elif sweep_type == "batch":
                 batch_size = value
+                model_labels.append(f'batch size {value}')
             elif sweep_type == "normalisation":
                 normalisation = value
+                model_labels.append(f'{value} normalisation')
             elif sweep_type == "lr":
                 learning_rate = value
+                model_labels.append(f'{value} learning rate')
             elif sweep_type == "wd":
                 weight_decay = value
+                model_labels.append(f'{value} weight decay')
             elif sweep_type == "optimiser":
                 optimiser_cls = value
+                model_labels.append(f'{value} optimiser')
 
             # Load data
-            X_train = Tensor(normalisation(np.load("./data/train_data.npy")))
-            y_train = Tensor(np.load("./data/train_label.npy").squeeze())
-            X_test = Tensor(normalisation(np.load("./data/test_data.npy")))
-            y_test = Tensor(np.load("./data/test_label.npy").squeeze())
+            X_train = Tensor(normalisation(np.load("../data/train_data.npy")))
+            y_train = Tensor(np.load("../data/train_label.npy").squeeze())
+            X_test = Tensor(normalisation(np.load("../data/test_data.npy")))
+            y_test = Tensor(np.load("../data/test_label.npy").squeeze())
 
             optimiser = optimiser_cls(
                 model.get_all_tensors(),
@@ -121,7 +130,10 @@ def main():
             all_test_loss.append(test_loss)
             all_test_accuracy.append(test_accuracy)
 
-        folder = "./experiments/results/"
+        folder = f"./experiments/results/{sweep_type}"
+
+        plot_losses_and_accuracies(folder + "/train", model_labels, all_training_loss_lst, all_train_acc_lst)
+
         save_loss_accuracy(
             folder + sweep_type,
             sweep_values,

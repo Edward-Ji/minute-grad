@@ -33,7 +33,10 @@ def train_loop(
 
             train_loss += loss.val.item()
             train_accuracy += np.mean(np.argmax(logits.val, axis=1) == y_batch.val)
-
+        
+        if optimiser.name == 'Adam':
+            optimiser.iterations += 1
+        
         train_loss /= len(batches)
         train_accuracy /= len(batches)
 
@@ -52,6 +55,8 @@ def train_loop(
                 f"Test Loss: {test_loss:.4f},"
                 f"Test Accuracy: {test_accuracy:.2%}"
             )
+    if optimiser.name == 'Adam':
+        optimiser.iterations = 1
 
     return train_loss_lst, train_acc_lst, test_loss, test_accuracy
 
