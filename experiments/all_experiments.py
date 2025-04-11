@@ -325,10 +325,10 @@ def run_experiment(folder, models, model_labels):
     all_test_accuracy = []
 
     for model in models:
-        X_train = Tensor(standard_scale(np.load("./data/train_data.npy")))
-        y_train = Tensor(np.load("./data/train_label.npy").squeeze())
-        X_test = Tensor(standard_scale(np.load("./data/test_data.npy")))
-        y_test = Tensor(np.load("./data/test_label.npy").squeeze())
+        X_train = Tensor(standard_scale(np.load("../data/train_data.npy")))
+        y_train = Tensor(np.load("../data/train_label.npy").squeeze())
+        X_test = Tensor(standard_scale(np.load("../data/test_data.npy")))
+        y_test = Tensor(np.load("../data/test_label.npy").squeeze())
 
         epochs = 50
         batch_size = 64

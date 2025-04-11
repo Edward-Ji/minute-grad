@@ -14,6 +14,7 @@ from layer import (
     ReLU,
     LeakyReLU,
     Linear,
+    BatchNormalisation
 )
 from optimiser import AdamOptimiser, GradientDescentOptimiser
 from tensor import Tensor
@@ -23,6 +24,7 @@ from train_util import save_loss_accuracy, train_loop, plot_losses_and_accuracie
 model = Composite(
     [
         Linear(128, 256, initialise=kaiming_uniform),
+        BatchNormalisation(256),
         LeakyReLU(),
         Linear(256, 10, initialise=kaiming_uniform),
     ]
