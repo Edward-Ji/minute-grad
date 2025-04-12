@@ -15,7 +15,7 @@ from layer import (
 )
 from optimiser import GradientDescentOptimiser, AdamOptimiser
 from tensor import Tensor
-from util import kaiming_uniform, min_max_scale
+from util import kaiming_uniform, min_max_scale, standard_scale
 from train_util import save_loss_accuracy, train_loop, plot_losses_and_accuracies
 
 # Optimal model for reference
@@ -30,11 +30,11 @@ optimal_model = Composite(
 
 def main():
     # Optimal hyperparams
-    epochs = 20
+    epochs = 100
     batch_size = 64
-    normalisation = min_max_scale
-    learning_rate = 0.0001
-    weight_decay = 1e-05
+    normalisation = standard_scale
+    learning_rate = 0.001
+    weight_decay = 0.001
     optimiser = AdamOptimiser
 
     # Define all sweeps

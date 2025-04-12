@@ -21,16 +21,7 @@ from tensor import Tensor
 from util import kaiming_uniform, min_max_scale, standard_scale
 from train_util import save_loss_accuracy, train_loop, plot_losses_and_accuracies
 
-model = Composite(
-    [
-        Linear(128, 256, initialise=kaiming_uniform),
-        BatchNormalisation(256),
-        LeakyReLU(),
-        Linear(256, 10, initialise=kaiming_uniform),
-    ]
-)
-
-epochs = [10, 20, 40, 60]
+epochs = [10, 20, 50, 100]
 
 batches = [1, 4, 8, 32, 64, 128]
 
@@ -45,8 +36,8 @@ optimisers = [AdamOptimiser, GradientDescentOptimiser]
 
 def main():
     # Define defaults
-    default_epoch = 20
-    default_batch_size = 8
+    default_epoch = 100
+    default_batch_size = 32
     default_normalisation = standard_scale
     default_learning_rate = 0.001
     default_weight_decay = 0.001
@@ -54,12 +45,12 @@ def main():
 
     # Define all sweeps
     sweep_configs = {
-        "epoch": epochs,
-        "batch": batches,
-        "normalisation": normalisations,
-        "lr": learning_rates,
-        "wd": weight_decays,
-        "optimiser": optimisers,
+        # "epoch": epochs,
+        # "batch": batches,
+        "normalisation": normalisations
+        # "lr": learning_rates,
+        # "wd": weight_decays,
+        # "optimiser": optimisers
     }
 
     for sweep_type, sweep_values in sweep_configs.items():
@@ -72,6 +63,16 @@ def main():
         model_labels = []
 
         for value in sweep_values:
+            # Define the model
+            model = Composite(
+                [
+                    Linear(128, 256, initialise=kaiming_uniform),
+                    BatchNormalisation(256),
+                    LeakyReLU(),
+                    Linear(256, 10, initialise=kaiming_uniform),
+                ]
+            )
+
             # Start with defaults
             epoch = default_epoch
             batch_size = default_batch_size
@@ -89,7 +90,9 @@ def main():
                 model_labels.append(f'batch size {value}')
             elif sweep_type == "normalisation":
                 normalisation = value
-                model_labels.append(f'{value} normalisation')
+                name_dict = {0: "Min-max", 1: "Standard scaling"}
+                name = name_dict[normalisations.index(normalisation)]
+                model_labels.append(f'{name} normalisation')
             elif sweep_type == "lr":
                 learning_rate = value
                 model_labels.append(f'{value} learning rate')
@@ -98,8 +101,8 @@ def main():
                 model_labels.append(f'{value} weight decay')
             elif sweep_type == "optimiser":
                 optimiser_cls = value
-                model_labels.append(f'{value} optimiser')
-
+                model_labels.append(f'{value.name} optimiser')
+            
             # Load data
             X_train = Tensor(normalisation(np.load("../data/train_data.npy")))
             y_train = Tensor(np.load("../data/train_label.npy").squeeze())

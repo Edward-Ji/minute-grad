@@ -1,3 +1,3 @@
 Model,Training Loss,Training Accuracy,Test Loss,Test Accuracy
-<class 'optimiser.AdamOptimiser'>,1.7629012344392778,0.63516,1.8964502523888611,0.5158
-<class 'optimiser.GradientDescentOptimiser'>,1.713037733270013,0.68618,1.8957427963462483,0.5171
+<class 'optimiser.AdamOptimiser'>,1.694261897853408,0.7004358605246321,1.8665393426330208,0.5362
+<class 'optimiser.GradientDescentOptimiser'>,1.9661046879613384,0.45851327575175943,1.988131519341263,0.4362
