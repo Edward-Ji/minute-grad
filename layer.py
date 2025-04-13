@@ -176,11 +176,23 @@ class BatchNormalisation(Layer):
         self.epsilon = epsilon
         self.weights = Tensor(np.ones((1, features)), True)
         self.bias = Tensor(np.zeros((1, features)), True)
+        self.averages = np.zeros((1, features))
+        self.variances = np.zeros((1, features))
+        self.num_examples = 0
 
     def forward(self, x) -> Tensor:
-        mu = np.mean(x.val, axis=0)
-        sigma_squared = np.var(x.val, axis=0)
         batch_size = len(x.val)
+        if self.training:
+            # if we are training, we need to store a running mean and variance of the values
+            mu = np.mean(x.val, axis=0)
+            self.averages = ((self.averages * self.num_examples) + np.sum(x.val, axis=0)) / (self.num_examples + batch_size)
+            sigma_squared = np.var(x.val, axis=0)
+            self.variances = ((self.variances * self.num_examples) + (np.var(x.val, axis=0) * batch_size)) / (self.num_examples + batch_size)
+            self.num_examples += batch_size
+        else:
+            mu = self.averages
+            sigma_squared = self.variances
+        
         normalised_data = (x.val - mu) / np.sqrt(sigma_squared + self.epsilon)
         # We do an elementwise multiplication here with the weights because normalised data is a tensor containing multiple input samples
         # Therefore, we want to multiply the weight array with each respective column in the tensor

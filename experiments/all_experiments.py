@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -299,12 +300,12 @@ batchnorm_labels = ["With Batch Normalisation", "Without Batch Normalisation"]
 
 
 experiments = [
-    [depth_models, depth_labels],
+    [depth_models, depth_labels]
     [width_models, width_labels],
     [dropout_models, dropout_labels],
     [dropout_3l_models, dropout_3l_labels],
     [activation_models, activation_labels],
-    [batchnorm_models, batchnorm_labels],
+    [batchnorm_models, batchnorm_labels]
 ]
 
 folders = [
@@ -324,19 +325,22 @@ def run_experiment(folder, models, model_labels):
     all_test_loss = []
     all_test_accuracy = []
 
+    training_times = []
+    inference_times = []
+
     for model in models:
         X_train = Tensor(standard_scale(np.load("../data/train_data.npy")))
         y_train = Tensor(np.load("../data/train_label.npy").squeeze())
         X_test = Tensor(standard_scale(np.load("../data/test_data.npy")))
         y_test = Tensor(np.load("../data/test_label.npy").squeeze())
 
-        epochs = 50
+        epochs = 100
         batch_size = 64
 
         optimiser = AdamOptimiser(model.get_all_tensors(), weight_decay=1e-5)
         loss_fn = CrossEntropyLoss(label_smoothing=0.3)
 
-        train_loss_lst, train_acc_lst, test_loss, test_accuracy = train_loop(
+        train_loss_lst, train_acc_lst, test_loss, test_accuracy, training_time, inference_time = train_loop(
             X_train,
             y_train,
             X_test,
@@ -347,6 +351,9 @@ def run_experiment(folder, models, model_labels):
             optimiser,
             loss_fn,
         )
+
+        training_times.append(training_time)
+        inference_times.append(inference_time)
 
         all_training_loss_lst.append(train_loss_lst)
         all_train_acc_lst.append(train_acc_lst)
@@ -364,6 +371,8 @@ def run_experiment(folder, models, model_labels):
         [x[-1] for x in all_train_acc_lst],
         all_test_loss,
         all_test_accuracy,
+        training_times,
+        inference_times
     )
 
 

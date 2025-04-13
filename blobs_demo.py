@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.datasets import make_blobs
 
-from layer import Composite, CrossEntropyLoss, Dropout, Linear, ReLU, Softmax, BatchNormalisation
+from layer import Composite, CrossEntropyLoss, Dropout, Linear, ReLU, BatchNormalisation
 from optimiser import AdamOptimiser
 from tensor import Tensor
 from util import BatchGenerator, train_test_split, xavier_uniform

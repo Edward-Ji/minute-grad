@@ -1,6 +1,7 @@
 from itertools import product
 import sys
 import os
+import time
 
 import csv
 
@@ -20,6 +21,8 @@ from optimiser import AdamOptimiser, GradientDescentOptimiser
 from tensor import Tensor
 from util import kaiming_uniform, min_max_scale, standard_scale
 from train_util import save_loss_accuracy, train_loop, plot_losses_and_accuracies
+
+# Define all the hyperparameters to test
 
 epochs = [10, 20, 50, 100]
 
@@ -45,12 +48,12 @@ def main():
 
     # Define all sweeps
     sweep_configs = {
-        # "epoch": epochs,
-        # "batch": batches,
-        "normalisation": normalisations
-        # "lr": learning_rates,
-        # "wd": weight_decays,
-        # "optimiser": optimisers
+        "epoch": epochs
+        "batch": batches,
+        "normalisation": normalisations,
+        "lr": learning_rates,
+        "wd": weight_decays,
+        "optimiser": optimisers
     }
 
     for sweep_type, sweep_values in sweep_configs.items():
@@ -61,15 +64,17 @@ def main():
         all_test_accuracy = []
 
         model_labels = []
+        training_times = []
+        inference_times = []
 
         for value in sweep_values:
             # Define the model
             model = Composite(
                 [
-                    Linear(128, 256, initialise=kaiming_uniform),
-                    BatchNormalisation(256),
+                    Linear(128, 192, initialise=kaiming_uniform),
+                    BatchNormalisation(192),
                     LeakyReLU(),
-                    Linear(256, 10, initialise=kaiming_uniform),
+                    Linear(192, 10, initialise=kaiming_uniform),
                 ]
             )
 
@@ -117,7 +122,7 @@ def main():
             loss_fn = CrossEntropyLoss(label_smoothing=0.3)
 
             # Train
-            train_loss_lst, train_acc_lst, test_loss, test_accuracy = train_loop(
+            train_loss_lst, train_acc_lst, test_loss, test_accuracy, training_time, inference_time = train_loop(
                 X_train,
                 y_train,
                 X_test,
@@ -128,6 +133,9 @@ def main():
                 optimiser,
                 loss_fn,
             )
+
+            training_times.append(training_time)
+            inference_times.append(inference_time)
 
             all_training_loss_lst.append(train_loss_lst)
             all_train_acc_lst.append(train_acc_lst)
@@ -146,6 +154,8 @@ def main():
             [x[-1] for x in all_train_acc_lst],
             all_test_loss,
             all_test_accuracy,
+            training_times,
+            inference_times
         )
 
 

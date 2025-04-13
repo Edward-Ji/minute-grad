@@ -1,6 +1,7 @@
 import csv
 import sys
 import os
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -15,15 +16,19 @@ from util import BatchGenerator
 def train_loop(
     X_train, y_train, X_test, y_test, epochs, batch_size, model, optimiser, loss_fn
 ):
+    # Define a training loop to be used by a model, which conducts both training and testing of the model
     batches = BatchGenerator(X_train, y_train, batch_size=batch_size)
 
     train_loss_lst = []
     train_acc_lst = []
+    start_time = time.time()
 
+    # Training loop
     for epoch in tqdm(range(epochs)):
         train_loss = 0
         train_accuracy = 0
         model.train(True)
+        # For each batch, produce a prediction and calculate the loss
         for X_batch, y_batch in batches:
             optimiser.zero_grad()
             logits = model(X_batch)
@@ -37,28 +42,37 @@ def train_loop(
         if optimiser.name == 'Adam':
             optimiser.iterations += 1
         
+        # Calculate the training loss and accuracy
+
         train_loss /= len(batches)
         train_accuracy /= len(batches)
 
         train_loss_lst.append(train_loss)
         train_acc_lst.append(train_accuracy)
 
-        if epoch % 10 == 0:
-            model.train(False)
-            test_logits = model(X_test)
-            test_loss = loss_fn(test_logits, y_test).val.item()
-            test_accuracy = np.mean(np.argmax(test_logits.val, axis=1) == y_test.val)
-            tqdm.write(
-                f"Epoch {epoch}, "
-                f"Train Loss: {train_loss:.4f}, "
-                f"Train Accuracy: {train_accuracy:.2%}, "
-                f"Test Loss: {test_loss:.4f},"
-                f"Test Accuracy: {test_accuracy:.2%}"
-            )
+    # Note the time taken to train
+    training_time = time.time() - start_time
+
+    # After training is completed, test the model to see how well it performs
+    start_time = time.time()
+    model.train(False)
+    test_logits = model(X_test)
+    inference_time = time.time() - start_time
+    test_loss = loss_fn(test_logits, y_test).val.item()
+    test_accuracy = np.mean(np.argmax(test_logits.val, axis=1) == y_test.val)
+    tqdm.write(
+        f"Epoch {epoch}, "
+        f"Train Loss: {train_loss:.4f}, "
+        f"Train Accuracy: {train_accuracy:.2%}, "
+        f"Test Loss: {test_loss:.4f},"
+        f"Test Accuracy: {test_accuracy:.2%}"
+    )
+
+    # Reset the optimiser if necessary
     if optimiser.name == 'Adam':
         optimiser.iterations = 1
 
-    return train_loss_lst, train_acc_lst, test_loss, test_accuracy
+    return train_loss_lst, train_acc_lst, test_loss, test_accuracy, training_time, inference_time
 
 
 def plot_losses_and_accuracies(
@@ -93,7 +107,7 @@ def plot_losses_and_accuracies(
 
 
 def plot_losses(filename, model_labels, training_losses):
-    # Plotting
+    # Plotting training lossses across the number of epochs trained for each of the different model types
     plt.figure(figsize=(10, 6))
     for i, losses in enumerate(training_losses):
         label = model_labels[i] if i < len(model_labels) else f"Model {i}"
@@ -110,7 +124,8 @@ def plot_losses(filename, model_labels, training_losses):
     plt.close()
 
 
-def save_loss_accuracy(filename, labels, train_loss, train_acc, losses, accuracies):
+def save_loss_accuracy(filename, labels, train_loss, train_acc, losses, accuracies, training_time, inference_time):
+    # Produce a CSV which contains the training and test losses and accuracies, as well as the training and inference times
     with open(f"{filename}.csv", "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(
@@ -120,9 +135,11 @@ def save_loss_accuracy(filename, labels, train_loss, train_acc, losses, accuraci
                 "Training Accuracy",
                 "Test Loss",
                 "Test Accuracy",
+                "Training time (seconds)",
+                "Inference time (seconds)"
             ]
         )
-        for label, t_loss, t_acc, loss, acc in zip(
-            labels, train_loss, train_acc, losses, accuracies
+        for label, t_loss, t_acc, loss, acc, train_time, test_time in zip(
+            labels, train_loss, train_acc, losses, accuracies, training_time, inference_time
         ):
-            writer.writerow([label, t_loss, t_acc, loss, acc])
+            writer.writerow([label, t_loss, t_acc, loss, acc, train_time, test_time])

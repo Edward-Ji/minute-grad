@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -21,10 +22,10 @@ from train_util import save_loss_accuracy, train_loop, plot_losses_and_accuracie
 # Optimal model for reference
 optimal_model = Composite(
     [
-        Linear(128, 256, initialise=kaiming_uniform),
-        BatchNormalisation(256),
+        Linear(128, 192, initialise=kaiming_uniform),
+        BatchNormalisation(192),
         LeakyReLU(),
-        Linear(256, 10, initialise=kaiming_uniform),
+        Linear(192, 10, initialise=kaiming_uniform),
     ]
 )
 
@@ -47,16 +48,16 @@ def main():
         ),
         "No activation": Composite(
             [
-                Linear(128, 256, initialise=kaiming_uniform),
-                BatchNormalisation(256),
-                Linear(256, 10, initialise=kaiming_uniform),
+                Linear(128, 192, initialise=kaiming_uniform),
+                BatchNormalisation(192),
+                Linear(192, 10, initialise=kaiming_uniform),
             ]
         ),
         "No batch normalisation": Composite(
             [
-                Linear(128, 256, initialise=kaiming_uniform),
+                Linear(128, 192, initialise=kaiming_uniform),
                 LeakyReLU(),
-                Linear(256, 10, initialise=kaiming_uniform),
+                Linear(192, 10, initialise=kaiming_uniform),
             ]
         )
     }
@@ -66,6 +67,9 @@ def main():
 
     all_test_loss = []
     all_test_accuracy = []
+
+    training_times = []
+    inference_times = []
 
     model_labels = list(sweep_configs.keys())
 
@@ -84,7 +88,7 @@ def main():
         loss_fn = CrossEntropyLoss(label_smoothing=0.3)
 
         # Train
-        train_loss_lst, train_acc_lst, test_loss, test_accuracy = train_loop(
+        train_loss_lst, train_acc_lst, test_loss, test_accuracy, training_time, inference_time = train_loop(
             X_train,
             y_train,
             X_test,
@@ -95,6 +99,9 @@ def main():
             optimiser_current,
             loss_fn,
         )
+
+        training_times.append(training_time)
+        inference_times.append(inference_time)
 
         all_training_loss_lst.append(train_loss_lst)
         all_train_acc_lst.append(train_acc_lst)
@@ -113,6 +120,8 @@ def main():
         [x[-1] for x in all_train_acc_lst],
         all_test_loss,
         all_test_accuracy,
+        training_times,
+        inference_times
     )
 
 if __name__ == "__main__":

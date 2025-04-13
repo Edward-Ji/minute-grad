@@ -1,3 +1,3 @@
-Model,Training Loss,Training Accuracy,Test Loss,Test Accuracy
-<class 'optimiser.AdamOptimiser'>,1.694261897853408,0.7004358605246321,1.8665393426330208,0.5362
-<class 'optimiser.GradientDescentOptimiser'>,1.9661046879613384,0.45851327575175943,1.988131519341263,0.4362
+Model,Training Loss,Training Accuracy,Test Loss,Test Accuracy,Training time (seconds),Inference time (seconds)
+<class 'optimiser.AdamOptimiser'>,1.7292342564310441,0.6669265834932822,1.8654420130029092,0.5386,53.724202156066895,0.02326369285583496
+<class 'optimiser.GradientDescentOptimiser'>,1.9713030783040313,0.4512356046065259,1.983750638732751,0.4369,38.587265729904175,0.021358251571655273
