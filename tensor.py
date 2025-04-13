@@ -24,16 +24,29 @@ class Tensor:
         self._prev: set[Tensor] = set()
 
     def __len__(self):
+        """
+        Returns the length of the first dimension of the underlying numpy array.
+        """
         return len(self.val)
 
     @property
     def shape(self):
+        """
+        Returns the shape of the underlying numpy array.
+        """
         return self.val.shape
 
     def __str__(self):
+        """
+        Returns a string representation of the tensor in the format:
+            Tensor(np.array([...]))
+        """
         return f"Tensor({self.val})"
 
     def __matmul__(self, other):
+        """
+        Matrix multiplication of two tensors.
+        """
         out = Tensor(self.val @ other.val, self.requires_grad or other.requires_grad)
 
         def _backward():
@@ -48,6 +61,9 @@ class Tensor:
         return out
 
     def __add__(self, other):
+        """
+        Element-wise addition of two tensors.
+        """
         out = Tensor(self.val + other.val, self.requires_grad or other.requires_grad)
 
         def _backward():
@@ -62,6 +78,9 @@ class Tensor:
         return out
 
     def __neg__(self):
+        """
+        Negates the tensor element-wise.
+        """
         out = Tensor(-self.val, self.requires_grad)
 
         def _backward():
@@ -74,9 +93,15 @@ class Tensor:
         return out
 
     def __sub__(self, other):
+        """
+        Element-wise subtraction of two tensors.
+        """
         return self + -other
 
     def __mul__(self, other):
+        """
+        Element-wise multiplication of two tensors.
+        """
         out = Tensor(self.val * other.val, self.requires_grad or other.requires_grad)
 
         def _backward():
@@ -103,6 +128,9 @@ class Tensor:
         return out
 
     def abs(self):
+        """
+        Computes the absolute value of the tensor element-wise.
+        """
         out = Tensor(np.abs(self.val), self.requires_grad)
 
         def _backward():
@@ -115,6 +143,9 @@ class Tensor:
         return out
 
     def __pow__(self, power):
+        """
+        computes the power of the tensor element-wise.
+        """
         out = Tensor(self.val**power, self.requires_grad)
 
         def _backward():
@@ -129,6 +160,9 @@ class Tensor:
         return out
 
     def sum(self):
+        """
+        Computes the sum of all elements in the tensor.
+        """
         out = Tensor(np.sum(self.val), self.requires_grad)
 
         def _backward():
