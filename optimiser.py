@@ -1,16 +1,41 @@
+from abc import abstractmethod
+
 import numpy as np
 
 
 class Optimiser:
+    """
+    Base class for all optimisers.
+    """
+
     def __init__(self, tensors):
         self.tensors = list(tensors)
 
     def zero_grad(self):
+        """
+        Set all tensor gradients to zero.
+        """
         for tensor in self.tensors:
             tensor.grad = np.zeros_like(tensor.grad)
 
+    @abstractmethod
+    def optimise(self):
+        """
+        Optimise the tensors.
+        """
+        raise NotImplementedError("Optimiser must implement optimise method.")
+
 
 class GradientDescentOptimiser(Optimiser):
+    """
+    This is a simple gradient descent optimiser that updates the tensor values
+    based on the gradients and a learning rate. It simply subtracts the
+    gradients from the tensor values, scaled by the learning rate. An optional
+    weight decay term can be added to the gradients before updating the tensor
+    values. The weight decay term is simply the tensor value multiplied by the
+    weight decay factor.
+    """
+
     name = "SGD"
 
     def __init__(self, tensors, learning_rate=1e-3, weight_decay=0.0):
@@ -26,6 +51,17 @@ class GradientDescentOptimiser(Optimiser):
 
 
 class AdamOptimiser(Optimiser):
+    """
+    Adam is a stochastic gradient descent method that is based on the idea of
+    adaptive learning rates. It uses the first and second moments of the
+    gradients to adapt the learning rate for each parameter. The first moment
+    is the mean of the gradients, and the second moment is the uncentered
+    variance of the gradients. Adam uses a moving average of the first and
+    second moments of the gradients to adapt the learning rate for each
+    parameter. The moving averages are computed using exponential decay rates
+    controlled by beta1 and beta2.
+    """
+
     name = "Adam"
 
     def __init__(
@@ -63,8 +99,12 @@ class AdamOptimiser(Optimiser):
                 + (1 - self.beta2) * tensor.grad**2
             )
             # Bias correction
-            first_moment_corrected = self.first_moment[tensor] / (1 - pow(self.beta1, self.iterations))
-            second_moment_corrected = self.second_moment[tensor] / (1 - pow(self.beta2, self.iterations))
+            first_moment_corrected = self.first_moment[tensor] / (
+                1 - pow(self.beta1, self.iterations)
+            )
+            second_moment_corrected = self.second_moment[tensor] / (
+                1 - pow(self.beta2, self.iterations)
+            )
             tensor.val -= (
                 self.learning_rate
                 * first_moment_corrected
