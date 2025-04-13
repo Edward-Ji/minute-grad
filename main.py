@@ -1,16 +1,16 @@
 import numpy as np
 from tqdm.auto import tqdm
 
-from layer import Composite, CrossEntropyLoss, Dropout, ReLU, Linear
+from layer import Composite, CrossEntropyLoss, Dropout, ReLU, LeakyReLU, Linear, BatchNormalisation
 from optimiser import AdamOptimiser
 from tensor import Tensor
-from util import BatchGenerator, xavier_uniform
+from util import BatchGenerator, xavier_uniform, standard_scale
 
 
 def main():
-    X_train = Tensor(np.load("./data/train_data.npy", allow_pickle=True))
+    X_train = Tensor(standard_scale(np.load("./data/train_data.npy", allow_pickle=True)))
     y_train = Tensor(np.load("./data/train_label.npy").squeeze())
-    X_test = Tensor(np.load("./data/test_data.npy"))
+    X_test = Tensor(standard_scale(np.load("./data/test_data.npy")))
     y_test = Tensor(np.load("./data/test_label.npy").squeeze())
 
     epochs = 100
@@ -20,19 +20,13 @@ def main():
 
     model = Composite(
         [
-            Linear(128, 512),
-            ReLU(),
-            Dropout(0.3),
-            Linear(512, 256),
-            ReLU(),
-            Dropout(0.3),
-            Linear(256, 128),
-            ReLU(),
-            Dropout(0.3),
-            Linear(128, 10, initialise=xavier_uniform),
+            Linear(128, 192),
+            BatchNormalisation(192),
+            LeakyReLU(),
+            Linear(192, 10, initialise=xavier_uniform),
         ]
     )
-    optimiser = AdamOptimiser(model.get_all_tensors(), weight_decay=1e-5)
+    optimiser = AdamOptimiser(model.get_all_tensors(), weight_decay=0.001)
     loss_fn = CrossEntropyLoss(label_smoothing=0.3)
 
     for epoch in tqdm(range(epochs)):

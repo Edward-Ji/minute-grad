@@ -21,10 +21,12 @@ experiments/all_experiments.py`.
 ├── data                             # Provided dataset in NumPy format
 │   └── ...
 ├── experiments                      # Experimental scripts and utilities
-│   ├── results                      # Directory containing experiment results (metrics & plots)
-│   │   └── ...
-│   ├── all_experiments.py           # Runs all experiments
-│   ├── hyperparameter.py            # Hyperparameter tuning experiments
+│   ├── experiments                  # Directory containing experiment results (metrics & plots)
+│   │   └── results
+│   │       └──...
+│   ├── architecture_experiments.py  # Runs architecture experiments testing different number of layers, neurons, etc.
+│   ├── hyperparameter_experiments.py# Hyperparameter tuning experiments
+│   ├── ablation_test.py             # Code used for the ablation study
 │   └── train_util.py                # Helper functions for training routines
 ├── layer.py                         # Implementation of network layers
 ├── main.py                          # An example training script on the provided dataset
