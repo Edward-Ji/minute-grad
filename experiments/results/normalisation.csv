@@ -1,3 +1,0 @@
-Model,Training Loss,Training Accuracy,Test Loss,Test Accuracy
-<function min_max_scale at 0x1058820c0>,2.026381310717299,0.4002,2.1902196483957708,0.2654
-<function standard_scale at 0x105882160>,1.7328110818132658,0.65668,1.8549515807223036,0.5467

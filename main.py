@@ -13,7 +13,7 @@ def main():
     X_test = Tensor(np.load("./data/test_data.npy"))
     y_test = Tensor(np.load("./data/test_label.npy").squeeze())
 
-    epochs = 50
+    epochs = 100
     batch_size = 64
 
     batches = BatchGenerator(X_train, y_train, batch_size=batch_size)
