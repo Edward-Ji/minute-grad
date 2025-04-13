@@ -100,6 +100,7 @@ def main():
             loss_fn,
         )
 
+        # Store the model's results to be plotted
         training_times.append(training_time)
         inference_times.append(inference_time)
 

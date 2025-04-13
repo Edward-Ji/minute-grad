@@ -329,6 +329,7 @@ def run_experiment(folder, models, model_labels):
     inference_times = []
 
     for model in models:
+        # Load and standardise the data
         X_train = Tensor(standard_scale(np.load("../data/train_data.npy")))
         y_train = Tensor(np.load("../data/train_label.npy").squeeze())
         X_test = Tensor(standard_scale(np.load("../data/test_data.npy")))
@@ -337,9 +338,11 @@ def run_experiment(folder, models, model_labels):
         epochs = 100
         batch_size = 64
 
+        # Set up the optimiser and the loss function
         optimiser = AdamOptimiser(model.get_all_tensors(), weight_decay=1e-5)
         loss_fn = CrossEntropyLoss(label_smoothing=0.3)
 
+        # Conduct the training loop to obtain the model's statistics on the data
         train_loss_lst, train_acc_lst, test_loss, test_accuracy, training_time, inference_time = train_loop(
             X_train,
             y_train,
@@ -352,6 +355,7 @@ def run_experiment(folder, models, model_labels):
             loss_fn,
         )
 
+        # Store this model's results to be plotted
         training_times.append(training_time)
         inference_times.append(inference_time)
 

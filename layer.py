@@ -183,15 +183,16 @@ class BatchNormalisation(Layer):
     def forward(self, x) -> Tensor:
         batch_size = len(x.val)
         if self.training:
-            # if we are training, we need to store a running mean and variance of the values
+            # If we are training, we need to store a running mean and variance of the values
             mu = np.mean(x.val, axis=0)
             self.averages = ((self.averages * self.num_examples) + np.sum(x.val, axis=0)) / (self.num_examples + batch_size)
             sigma_squared = np.var(x.val, axis=0)
             self.variances = ((self.variances * self.num_examples) + (np.var(x.val, axis=0) * batch_size)) / (self.num_examples + batch_size)
             self.num_examples += batch_size
         else:
+            # If we are in inference, use the stored running values
             mu = self.averages
-            sigma_squared = self.variances
+            sigma_squared = self.num_examples * self.variances / (self.num_examples - 1)
         
         normalised_data = (x.val - mu) / np.sqrt(sigma_squared + self.epsilon)
         # We do an elementwise multiplication here with the weights because normalised data is a tensor containing multiple input samples
@@ -215,6 +216,7 @@ class BatchNormalisation(Layer):
         )
 
         def _backward():
+            # Calculate the gradients of all the relevant parts of the batch normalisation algorithm
             beta_gradient = np.sum(out.grad, axis=0)
             gamma_gradient = np.sum(out.grad * normalised_data, axis=0)
             self.bias.grad += beta_gradient
